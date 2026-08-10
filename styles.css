@@ -122,7 +122,11 @@ em.house { font-style: italic; color: var(--wine); }
    ============================================================ */
 #panel { border-bottom: var(--rule); background: var(--paper); position: sticky; top: 0; z-index: 20; }
 #panel[hidden] { display: none; }
-.panel-inner { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad-x); }
+/* The page puts padding on .section and max-width on .container inside it, so its
+   content box is min(--max, viewport - 2*--pad-x). Carrying both on one element
+   here would make the panel 2*--pad-x narrower than the page; adding the gutters
+   back into the max-width reproduces the page's box exactly. */
+.panel-inner { max-width: calc(var(--max) + var(--pad-x) * 2); margin: 0 auto; padding: 0 var(--pad-x); }
 
 /* Both rows run on the SAME four-column grid, and both are pulled out by the cell
    padding so the first cell's text sits exactly on the page gutter. That way every
