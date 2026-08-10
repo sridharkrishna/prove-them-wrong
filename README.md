@@ -1,108 +1,124 @@
 # Prove Them Wrong
 
 An interactive decision game about what an IT services firm would actually have to
-change to survive AI — and why the two things its board wants are not the same game.
+change to survive AI — and whether the person in the chair survives making the changes.
 
-You are the chief executive of a large IT services firm. The market has cut your share
-price by 38% in six quarters on the belief that AI has made your business model
-obsolete. The board wants +20–30% near term and a doubling in two years. You get eight
-decisions and eighteen months.
+You are the chief executive of a large IT services firm. Revenue grew again last year.
+So did profit. The share price has still lost two thirds of its value, because the
+market has stopped pricing your earnings and started pricing whether your business
+model survives the decade. You get ten decisions and eighteen months. The board meets
+three times along the way, and it does not have to wait until the end.
 
-Five to six minutes to play. One HTML file, no build step, no dependencies.
+Seven to eight minutes to play. No build step, no dependencies.
 
-## The design
+**Live:** https://sridharkrishna.github.io/prove-them-wrong/
 
-Two numbers are tracked while you play. Only one of them is labelled.
+## What the game is arguing
 
-The visible one is the share price, and it responds to what you announce. The
-unlabelled one is **institutional lag** — the months the firm's incentives, hiring,
-organisation and pricing trail what the technology already permits. It rises by two
-months every round on its own, because capability advances whether or not anyone acts
-on it, and it falls only when a decision changes how the firm actually works.
+A firm is an institution. Its incentives, its hiring, its leadership, its org chart and
+its pricing are the rules it actually runs on, and none of them change because a chief
+executive says the word AI on an analyst call.
 
-The near-term mandate can be bought with announcements. The two-year mandate cannot.
-Most players get one and not the other, and the reveal explains why.
+Three things carry that:
 
-The eight decisions are the incentive structure, the graduate pyramid, the platform
-budget, what the firm can offer a client who already has engineers and a model
-subscription, the pricing model, the organisation construct, the geographic map, and
-what goes on the first slide at analyst day.
+**The two attrition numbers are tracked separately.** Intended attrition — people you
+chose to remove — is not a problem, and the game says so explicitly at the end.
+Unintended attrition — the people who would have built the next thing, leaving for
+firms that pay disproportionately for exactly them — is what kills the strategy. The
+same decision can move one without the other, and telling them apart is most of the
+skill.
 
-Decisions are also scored against each other. Paying people on utilisation while
-asking them to sell a subscription cancels out; funding the corpus from client
-programmes while telling clients the corpus is your advantage cancels out. A short
-table of these pairs is named back to you at the end, because a strategy is not the
-sum of its decisions — it is whether the decisions permit each other.
+**Board confidence can end the game early.** Deep change costs confidence before it
+earns anything back, so the player has to sequence and explain rather than simply
+choose well. Below 25 at any of the three reviews, the board removes you. Roughly one
+random run in five ends this way, and the most aggressive possible opening — replace
+the leadership, rewrite the comp, reprice the talent, all in the first three decisions
+— is removed at the first review with the strategy intact and unexecuted.
 
-Seven endings. One of them is a win. One of them is what happens when every call you
-make is correct and the board removes you anyway.
+**Decisions are scored against each other, not just added up.** New leaders on the old
+scorecard cancel out. Mid-market clients on a time-and-materials rate card cancel out,
+because you cannot serve a $400m client with forty people on site. Every firing pair is
+named back to you at the end.
+
+Ten endings. Three are terminations, one is the win.
+
+## The ten decisions
+
+The leadership team · the incentive · the pyramid · the platform budget · the
+inheritance · the offer · the price · the org · the client · the story.
+
+The first is the one a real chief executive finds hardest. Fourteen people report to
+you and eleven have been there more than twenty years. They built the offshore
+delivery model, the digital practice, the cloud business and the analytics unit — and
+every one of those was the last war. The table shows their tenure before the question
+gets asked.
 
 ## Running it
 
-Open `index.html` in a browser. That is the whole thing.
-
-To serve it the way GitHub Pages does:
+Open `index.html` in a browser. To serve it the way GitHub Pages does:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then visit `http://localhost:8000`.
+## Files
 
-## Publishing to GitHub Pages
+```
+index.html    shell — links the stylesheet and the two scripts
+styles.css    design tokens and components
+content.js    all copy, weights, market wires and endings   ← edit this one
+engine.js     state, scoring, board logic, rendering, charts
+```
 
-`index.html` sits at the repository root and `.nojekyll` is present, so Pages needs no
-configuration. Push the repo, then in **Settings → Pages** set the source to *Deploy
-from a branch*, branch `main`, folder `/ (root)`. The site appears at
-`https://<user>.github.io/<repo>/` within a minute or two.
+Everything the game *says* is in `content.js`, ahead of any logic. Rewrite any string
+without touching the engine.
 
-Note that Pages sites on a free account are public.
-
-## Editing it
-
-Everything the game says lives in one block at the top of the `<script>` tag, before
-any logic:
-
-- `FIRM` — the firm's name and share price history
-- `DECISIONS` — all eight, with each option's copy and its three weights
-- `CONTRADICTIONS` / `COHERENCES` — the pairs that cancel or reinforce
-- `ENDINGS` — the seven verdicts
-
-Each option carries three numbers, all roughly in the range −1 to 4:
+Each option carries these weights:
 
 | Weight | Meaning |
 |---|---|
 | `signal` | what the market hears this quarter |
-| `substance` | what actually moves the firm's institutions |
-| `pain` | internal disruption, attrition, execution risk |
+| `substance` | what actually changes inside the firm |
+| `pain` | internal disruption and execution risk |
+| `board` | board confidence delta — the survival meter |
+| `managed` | intended attrition, in points. Rising is **not** a problem |
+| `unmanaged` | unintended attrition, in points. Rising is what kills you; negative is good |
 
-Rewriting copy needs no change to the engine below it. Changing weights will move the
-ending distribution, so re-check it afterwards — open the console and run:
+plus optional `growth`, `margin`, `clients`, `arpc`.
+
+Changing weights moves the ending distribution, so re-check it. Open the console:
 
 ```js
-__run([1,3,0,3,2,1,2,1], 30)
+__run([1,1,1,0,2,3,2,1,2,1], 22)
 ```
 
-That plays a fixed sequence of option indices at a given platform-budget percentage
-and returns the scores and the ending without drawing the reveal. The game is
-deterministic: the same sequence always gives the same result.
+That plays a fixed sequence of option indices at a given platform-budget percentage and
+returns the outcome without drawing anything. The game is deterministic — the same
+sequence always gives the same result. To check the spread, loop it over random
+sequences and tally `.ending`; no single ending should swallow the middle, and removal
+should sit near one run in five.
 
-## Sources
+## Sourcing
 
-The argument is drawn from the author's own work:
+Every market figure shown on screen comes from one of the author's own documents and
+carries its source beneath it. Nothing is estimated and presented as data. Where a
+figure would have been useful but unsourced, it was left out.
 
-- *Technological Disruption and Institutional Lag*, working paper — the lag thesis,
-  and the observation that the gap widens on its own when capability outruns
-  institutions
-- *AI Adoption — Think Tasks, Not Jobs*, Takshashila Discussion Document 2024-22 —
-  AI takes tasks rather than jobs, and adoption lags capability
-- *State of AI Governance*, 2026 — enterprise adoption friction
+- *The Fall of IT Services Firms*, hightechir.substack.com, 2026 — Accenture $417 to
+  $137 while revenue and profit grew; AI compressing delivery 30–50%; the industry
+  revenue mix; ~70% of top leadership with 20+ years' tenure; Accenture Edge opening
+  the $300m–$3bn tier; and the argument that firms must reward brilliance
+  disproportionately and let acquired cultures absorb the acquirer rather than the
+  reverse
+- *Technological Disruption and Institutional Lag*, working paper
+- *AI Adoption — Think Tasks, Not Jobs*, Takshashila Discussion Document 2024-22
+- *State of AI Governance*, 2026
 
 Sridhar Krishna, The Takshashila Institution.
 
 Built to the Takshashila design language: wine `#620d3c` and marigold `#f1a222` on
-near-white, Inter for words and Roboto Mono for metadata, hairline rules, no radius
-and no shadow anywhere.
+near-white, Inter for words and Roboto Mono for metadata, hairline rules, no radius and
+no shadow anywhere.
 
-Corvus Technology Services is a composite. It is not a real firm, and its figures are
-illustrative.
+Corvus Technology Services is a composite. It is not a real firm, and its financials
+are illustrative — only the market around it is real.
