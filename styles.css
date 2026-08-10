@@ -41,7 +41,9 @@
 @media (max-width: 560px) { :root { --pad-x: 18px; } }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+/* Each screen replaces the whole document body. Scroll anchoring would try to
+   preserve the old offset across that swap, which strands the player mid-page. */
+html, body { margin: 0; padding: 0; overflow-anchor: none; }
 body {
   font-family: var(--sans); font-size: 15px; line-height: 1.5;
   color: var(--ink); background: var(--paper);
@@ -147,7 +149,7 @@ em.house { font-style: italic; color: var(--wine); }
 .gauge-mark { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--ink); opacity: 0.55; }
 
 /* the ledger: four operating metrics, gapless ruled grid */
-.ledger { display: grid; grid-template-columns: repeat(5, 1fr); }
+.ledger { display: grid; grid-template-columns: repeat(4, 1fr); }
 .ledger-cell { padding: 10px 16px 11px; border-left: 1px solid var(--ink-10); }
 .ledger-cell:first-child { border-left: none; padding-left: 0; }
 .ledger-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em;
@@ -165,9 +167,9 @@ em.house { font-style: italic; color: var(--wine); }
   .panel-id { grid-column: 1 / -1; border-bottom: 1px solid var(--ink-10); }
   .headline { padding-left: 0; border-left: none; min-width: 0; }
   .headline + .headline { padding-left: 20px; border-left: var(--rule); }
-  .ledger { grid-template-columns: repeat(3, 1fr); }
-  .ledger-cell:nth-child(4) { padding-left: 0; border-left: none; }
-  .ledger-cell:nth-child(n+4) { border-top: 1px solid var(--ink-10); }
+  .ledger { grid-template-columns: repeat(2, 1fr); }
+  .ledger-cell:nth-child(odd) { padding-left: 0; border-left: none; }
+  .ledger-cell:nth-child(n+3) { border-top: 1px solid var(--ink-10); }
 }
 /* On a phone the panel is sticky, so it must stay short. The ledger becomes one
    horizontally scrollable row rather than a wrapping grid — every metric stays

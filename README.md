@@ -21,12 +21,12 @@ executive says the word AI on an analyst call.
 
 Three things carry that:
 
-**The two attrition numbers are tracked separately.** Intended attrition — people you
-chose to remove — is not a problem, and the game says so explicitly at the end.
-Unintended attrition — the people who would have built the next thing, leaving for
-firms that pay disproportionately for exactly them — is what kills the strategy. The
-same decision can move one without the other, and telling them apart is most of the
-skill.
+**Only one attrition number is tracked.** People removed deliberately are the price of
+a decision already taken, so they are not on the dashboard. What is tracked is
+attrition among the people you needed — the ones who would have built the next thing,
+leaving for firms willing to pay disproportionately for exactly them. Above 16% it
+drains board confidence every round; above 21% it has its own ending. Paying brilliance
+disproportionately is the only option that pushes it down.
 
 **Board confidence can end the game early.** Deep change costs confidence before it
 earns anything back, so the player has to sequence and explain rather than simply
@@ -81,8 +81,8 @@ Each option carries these weights:
 | `substance` | what actually changes inside the firm |
 | `pain` | internal disruption and execution risk |
 | `board` | board confidence delta — the survival meter |
-| `managed` | intended attrition, in points. Rising is **not** a problem |
-| `unmanaged` | unintended attrition, in points. Rising is what kills you; negative is good |
+| `unmanaged` | attrition among key people, in points. The only attrition shown; negative is good |
+| `managed` | people removed deliberately. Kept in the model, deliberately **not** displayed |
 
 plus optional `growth`, `margin`, `clients`, `arpc`.
 
@@ -98,27 +98,15 @@ sequence always gives the same result. To check the spread, loop it over random
 sequences and tally `.ending`; no single ending should swallow the middle, and removal
 should sit near one run in five.
 
-## Sourcing
+## On the figures
 
-Every market figure shown on screen comes from one of the author's own documents and
-carries its source beneath it. Nothing is estimated and presented as data. Where a
-figure would have been useful but unsourced, it was left out.
-
-- *The Fall of IT Services Firms*, hightechir.substack.com, 2026 — Accenture $417 to
-  $137 while revenue and profit grew; AI compressing delivery 30–50%; the industry
-  revenue mix; ~70% of top leadership with 20+ years' tenure; Accenture Edge opening
-  the $300m–$3bn tier; and the argument that firms must reward brilliance
-  disproportionately and let acquired cultures absorb the acquirer rather than the
-  reverse
-- *Technological Disruption and Institutional Lag*, working paper
-- *AI Adoption — Think Tasks, Not Jobs*, Takshashila Discussion Document 2024-22
-- *State of AI Governance*, 2026
+The numbers set the scenario. They are not presented as research, no claim is
+attributed to a named company, and the briefing says so on screen. Corvus Technology
+Services is a composite — not a real firm, with illustrative financials — and every
+competitor, client and market event in the game is likewise invented.
 
 Sridhar Krishna, The Takshashila Institution.
 
 Built to the Takshashila design language: wine `#620d3c` and marigold `#f1a222` on
 near-white, Inter for words and Roboto Mono for metadata, hairline rules, no radius and
 no shadow anywhere.
-
-Corvus Technology Services is a composite. It is not a real firm, and its financials
-are illustrative — only the market around it is real.

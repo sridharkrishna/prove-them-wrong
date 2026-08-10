@@ -38,6 +38,8 @@ function reset() {
 const $ = sel => document.querySelector(sel);
 const app = () => $("#app");
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+/* Always call after writing innerHTML, never before — see screenBrief. */
+const toTop = () => { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 const pad2 = n => String(n).padStart(2, "0");
 
@@ -165,11 +167,12 @@ function renderPanel() {
   const boardDelta = h.board[n] - h.board[prev];
   const gaugeClass = S.board < BOARD_FLOOR ? "danger" : S.board < BOARD_WARN ? "warn" : "";
 
+  // Only unintended attrition is tracked. People removed deliberately are the price
+  // of a decision already made, so putting them on the dashboard only adds noise.
   const cells = [
     { label: "Revenue growth", val: S.growth.toFixed(1) + "%", series: h.growth, d: deltaHTML(h.growth[n], h.growth[prev], 1), cls: "" },
     { label: "Operating margin", val: S.margin.toFixed(1) + "%", series: h.margin, d: deltaHTML(h.margin[n], h.margin[prev], 1), cls: "" },
-    { label: "Attrition · intended", val: S.managed.toFixed(1) + "%", series: h.managed, d: `<span class="ledger-delta flat">${h.managed[n] > h.managed[prev] ? "+" + (h.managed[n]-h.managed[prev]).toFixed(1) : "—"}</span>`, cls: "intended" },
-    { label: "Attrition · unintended", val: S.unmanaged.toFixed(1) + "%", series: h.unmanaged, d: deltaHTML(h.unmanaged[n], h.unmanaged[prev], 1, true), cls: "unintended" },
+    { label: "Attrition · key people", val: S.unmanaged.toFixed(1) + "%", series: h.unmanaged, d: deltaHTML(h.unmanaged[n], h.unmanaged[prev], 1, true), cls: "unintended" },
     { label: "New clients · rev per client", val: Math.round(S.clients) + " · $" + Math.round(S.arpc) + "m", series: h.clients, d: deltaHTML(h.clients[n], h.clients[prev], 0), cls: "" }
   ];
 
@@ -250,7 +253,7 @@ function screenBrief() {
           <p style="font-size:16px;line-height:1.6">Revenue grew again last year. So did profit. The share price has still lost two thirds of its value, because the market has stopped pricing your earnings and started pricing whether your business model survives the decade. Your largest clients can now hire the same models you can, on the same morning, at the same price.</p>
           <p style="font-size:16px;line-height:1.6">The board has given you eighteen months, ten decisions and a mandate it has put in writing. It meets three times along the way, and it does not have to wait until the end.</p>
           <div class="aside">
-            <p style="font-size:17px;line-height:1.5">Everything you are about to be told about the market is real and sourced. Only the firm is invented.</p>
+            <p style="font-size:17px;line-height:1.5">You will not be told how the board is weighing any of this. You will only see how much confidence it has left in you.</p>
           </div>
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-top:4px">
             <button class="btn" id="start">Take the chair &rarr;</button>
@@ -273,7 +276,7 @@ function screenBrief() {
               <text x="6" y="${(y(100)-8).toFixed(1)}" font-family="Roboto Mono, monospace" font-size="10" fill="rgba(23,20,19,0.5)">100</text>
               <text x="${(x(h.length-1)-6).toFixed(1)}" y="${(y(h[h.length-1])+20).toFixed(1)}" text-anchor="end" font-family="Roboto Mono, monospace" font-size="11" fill="#620d3c">33</text>
             </svg>
-            <div class="source">Indexed. Shaped on Accenture, $417 in December 2021 to $137 in July 2026 — Krishna, 2026.</div>
+            <div class="source">Indexed to 100 at the start of the period. Illustrative.</div>
           </div>
           <div>
             <span class="eyebrow">Board mandate</span>
@@ -294,28 +297,33 @@ function screenBrief() {
       <span class="eyebrow">Where the $22bn comes from</span>
       <h2 style="font-size:32px;line-height:1.15;letter-spacing:-0.015em;margin:12px 0 22px;max-width:24ch">Four fifths of your revenue is priced by the hour.</h2>
       ${mixBarHTML()}
-      <div class="source">Mix follows the sector shares reported in Krishna, The Fall of IT Services Firms, 2026: legacy application development and maintenance 50–60%, infrastructure and BPO 20–30%, consulting the remainder at the best margin.</div>
+      <div class="source">Legacy application development and maintenance carries the volume. Consulting and transformation carries the margin. Platform and reusable IP carries almost nothing yet.</div>
     </div>
   </section>
 
   <section class="section">
     <div class="container">
-      <span class="eyebrow">What has actually changed</span>
+      <span class="eyebrow">The conditions you inherit</span>
       <h2 style="font-size:32px;line-height:1.15;letter-spacing:-0.015em;margin:12px 0 24px;max-width:26ch">The technology moved. The question is whether the firm can.</h2>
       <div class="factgrid">
         ${FACTS.map(f => `<div>
           <div class="fact-fig num">${esc(f.fig)}</div>
           <p class="fact-txt">${esc(f.txt)}</p>
-          <div class="fact-src">${esc(f.src)}</div>
         </div>`).join("")}
       </div>
+      <div class="source">${esc(FACTS_NOTE)}</div>
       <div style="margin-top:32px"><button class="btn" id="start2">Begin &rarr;</button></div>
     </div>
   </section>`;
 
+  // Must come after the DOM is written: scrolling first lets the browser's scroll
+  // anchoring restore the old offset, which is how Play Again used to drop the
+  // player partway down the briefing instead of at the top of it.
+  toTop();
+
   const go = () => { $("#panel").hidden = false; renderPanel(); screenDecision(); };
   $("#start").onclick = go; $("#start2").onclick = go;
-  $("#start").focus();
+  $("#start").focus({ preventScroll: true });
 }
 
 function teamHTML() {
@@ -329,7 +337,7 @@ function teamHTML() {
       <span class="fitdots">${[1,2,3].map(i => `<span class="fitdot ${i <= t.fit ? "on" : ""}"></span>`).join("")}</span>
     </div>`).join("")}
   </div>
-  <div class="source">${esc(TEAM_FOOT)} Across the industry, roughly 70% of top leadership has more than two decades' tenure — Krishna, 2026.</div>`;
+  <div class="source">${esc(TEAM_FOOT)}</div>`;
 }
 
 function budgetHTML() {
@@ -346,7 +354,6 @@ function budgetHTML() {
 
 function screenDecision() {
   const d = DECISIONS[S.i];
-  window.scrollTo(0, 0);
   renderPanel();
   app().innerHTML = `
   <section class="stage fade-in">
@@ -382,6 +389,7 @@ function screenDecision() {
   }
   document.querySelectorAll(".card").forEach(b => { b.onclick = () => choose(+b.dataset.k); });
   S.awaiting = false;
+  toTop();
 }
 
 function choose(k) {
@@ -406,8 +414,7 @@ function choose(k) {
   };
   push("Board confidence", S.board - before.board, 0);
   push("Share price", S.price - before.price, 1);
-  push("Intended attrition", S.managed - before.managed, 1);
-  push("Unintended attrition", S.unmanaged - before.unmanaged, 1, true);
+  push("Attrition · key people", S.unmanaged - before.unmanaged, 1, true);
 
   const last = S.i === DECISIONS.length - 1;
   $("#after").innerHTML = `
@@ -420,7 +427,7 @@ function choose(k) {
         <span class="meta">Press enter</span>
       </div>
     </div>`;
-  $("#cont").focus();
+  $("#cont").focus({ preventScroll: true });
   $("#cont").onclick = afterChoice;
   const box = $("#after").getBoundingClientRect();
   if (box.bottom > window.innerHeight) $("#after").scrollIntoView({ block: "start" });
@@ -447,7 +454,6 @@ function nextScreen() {
 }
 
 function screenWire(w) {
-  window.scrollTo(0, 0);
   app().innerHTML = `
   <section class="section dark wirecard fade-in">
     <div class="container split">
@@ -463,12 +469,12 @@ function screenWire(w) {
       </div>
     </div>
   </section>`;
-  $("#cont").focus();
+  toTop();
+  $("#cont").focus({ preventScroll: true });
   $("#cont").onclick = nextScreen;
 }
 
 function screenReview(idx) {
-  window.scrollTo(0, 0);
   const r = REVIEWS[idx], band = reviewBand();
   if (band === "fired") S.firedAt = idx;
 
@@ -496,8 +502,7 @@ function screenReview(idx) {
             <tr><td>Share price, indexed</td><td class="num">${S.price.toFixed(1)}</td></tr>
             <tr><td>Revenue growth</td><td class="num">${S.growth.toFixed(1)}%</td></tr>
             <tr><td>Operating margin</td><td class="num">${S.margin.toFixed(1)}%</td></tr>
-            <tr><td>Attrition · intended</td><td class="num">${S.managed.toFixed(1)}%</td></tr>
-            <tr><td>Attrition · unintended</td><td class="num">${S.unmanaged.toFixed(1)}%</td></tr>
+            <tr><td>Attrition · key people</td><td class="num">${S.unmanaged.toFixed(1)}%</td></tr>
             <tr><td>New clients · rev per client</td><td class="num">${Math.round(S.clients)} · $${Math.round(S.arpc)}m</td></tr>
           </table>
           <div style="margin-top:26px">
@@ -508,7 +513,8 @@ function screenReview(idx) {
       </div>
     </div>
   </section>`;
-  $("#cont").focus();
+  toTop();
+  $("#cont").focus({ preventScroll: true });
   $("#cont").onclick = nextScreen;
 }
 
@@ -517,7 +523,6 @@ function screenReview(idx) {
    ============================================================================ */
 function screenReveal() {
   $("#panel").hidden = true;
-  window.scrollTo(0, 0);
   const R = finalScores();
   const fired = S.firedAt !== null;
   const q1pc = (R.q1 - 1) * 100, y2x = R.y2;
@@ -548,8 +553,8 @@ function screenReveal() {
             <span class="kpi-label">Board confidence · removal below ${BOARD_FLOOR}</span>
             <span class="kpi-verdict v-miss">Below the floor</span></div>
           <div class="kpi"><div class="kpi-fig num">${S.unmanaged.toFixed(1)}%</div>
-            <span class="kpi-label">Unintended attrition</span>
-            <span class="kpi-verdict" style="color:var(--on-dark-meta)">Intended ${S.managed.toFixed(1)}%</span></div>
+            <span class="kpi-label">Attrition among key people</span>
+            <span class="kpi-verdict" style="color:var(--on-dark-meta)">Started at 12%</span></div>
         </div>` : `
         <div class="kpi-strip">
           <div class="kpi"><div class="kpi-fig num">${fmtPc(q1pc)}</div>
@@ -559,8 +564,8 @@ function screenReveal() {
             <span class="kpi-label">Two years · target × 2.0</span>
             <span class="kpi-verdict ${y2hit ? "v-hit" : "v-miss"}">${y2hit ? "Mandate met" : "Mandate missed"}</span></div>
           <div class="kpi"><div class="kpi-fig num">${S.unmanaged.toFixed(1)}%</div>
-            <span class="kpi-label">Unintended attrition · started at 12%</span>
-            <span class="kpi-verdict" style="color:var(--on-dark-meta)">Intended ${S.managed.toFixed(1)}%, which cost you nothing</span></div>
+            <span class="kpi-label">Attrition among key people · started at 12%</span>
+            <span class="kpi-verdict ${S.unmanaged > 16 ? "v-miss" : "v-hit"}">${S.unmanaged > 16 ? "Above the level that hurts" : "Held"}</span></div>
         </div>`}
     </div>
   </section>
@@ -578,10 +583,10 @@ function screenReveal() {
         <div style="margin-top:14px">${mixBarHTML()}</div>
         <div class="source">Started at legacy 56%, infrastructure and BPO 26%, consulting 12%, platform 6%.</div>
         <div style="margin-top:26px">
-          <span class="eyebrow">The two attrition numbers</span>
+          <span class="eyebrow">The people you needed</span>
           <table class="deftable" style="margin-top:10px">
-            <tr><td>Intended — people you removed</td><td class="num">${S.managed.toFixed(1)}%</td></tr>
-            <tr><td>Unintended — people you lost</td><td class="num">${S.unmanaged.toFixed(1)}%</td></tr>
+            <tr><td>Attrition among key people</td><td class="num">${S.unmanaged.toFixed(1)}%</td></tr>
+            <tr><td>Where it stops costing you</td><td class="num">${UNMAN_SAFE}%</td></tr>
             <tr><td>Drag on the two-year figure</td><td class="num">−${R.attritionPenalty.toFixed(2)}</td></tr>
           </table>
         </div>
@@ -626,14 +631,15 @@ function screenReveal() {
         <p style="font-size:16px;line-height:1.6">A firm is an institution. Its incentives, its hiring, its leadership, its org chart and its pricing are the rules it actually runs on, and none of them change because a chief executive says the word AI on an analyst call. The hardest of those to change is the one made of people who have been there twenty years and who built everything that worked last time.</p>
       </div>
       <div>
-        <span class="eyebrow">Drawn from</span>
+        <span class="eyebrow">About this game</span>
         <table class="deftable" style="margin-top:10px">
-          ${SOURCES.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}
+          ${ABOUT.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}
         </table>
       </div>
     </div>
   </section>`;
 
+  toTop();
   $("#again").onclick = () => { reset(); screenBrief(); };
 }
 

@@ -8,14 +8,16 @@
      substance  what actually changes inside the firm     (-1 … 4)
      pain       internal disruption and execution risk     (0 … 5)
      board      board confidence delta                    (-9 … +6)
-     managed    intended attrition, in points — people you chose to remove.
-                Rising is NOT a problem. It is the cost of a decision you made.
-     unmanaged  unintended attrition, in points — the people you needed and lost.
-                Rising is the thing that kills the strategy. Negative is good.
+     unmanaged  attrition among the people you needed and lost. This is the only
+                attrition the game tracks or displays. Rising kills the strategy;
+                negative is good.
+     managed    people removed deliberately. Kept in the model but NOT shown
+                anywhere: it is the price of a decision already taken, not a
+                number a chief executive needs on a dashboard.
    and optionally: growth, margin, clients, arpc, mix {legacy, infra, consulting, platform}
 
-   NOTE ON FIGURES: every number shown on a market-context screen comes from one
-   of Sridhar's own documents and carries its source. Nothing is estimated.
+   NOTE ON FIGURES: the numbers here set the scenario. They are not presented as
+   research and nothing is attributed to a named company.
    ============================================================================ */
 
 const FIRM = {
@@ -33,21 +35,18 @@ const FIRM = {
   }
 };
 
-/* The briefing's evidence block. Each fact carries its source on screen. */
+/* The briefing's conditions block — the state of the world you inherit. */
 const FACTS = [
-  { fig: "$417 → $137",
-    txt: "Accenture's share price between December 2021 and July 2026 — while revenue and profit grew throughout. The market is not pricing this year's earnings. It is pricing whether the model survives the decade.",
-    src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
+  { fig: "−67%",
+    txt: "What your listed competitors have lost in market value since 2021, while revenue and profit grew throughout. The market is not pricing this year's earnings. It is pricing whether the model survives the decade." },
   { fig: "30–50%",
-    txt: "The compression AI applies to project timelines and resource requirements. The work still gets done, with fewer people and less time — and your contracts bill for people and time.",
-    src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
+    txt: "The compression AI applies to project timelines and resource requirements. The work still gets done, with fewer people and less time — and your contracts bill for people and time." },
   { fig: "70%",
-    txt: "The share of top leadership at these firms who have spent more than two decades there. They built the offshore model, the digital practice and the cloud business. The author calls this the hardest issue to fix.",
-    src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
+    txt: "The share of your top leadership who have spent more than two decades here. They built the offshore model, the digital practice and the cloud business. This is the hardest thing on this page to change." },
   { fig: "+26%",
-    txt: "Faster completion of software development tasks by engineers using AI. The capability is not in question and has not been for some time. What is in question is whether an organisation built for the old economics can absorb it.",
-    src: "Stanford HAI AI Index 2026, via Takshashila, State of AI Governance, 2026" }
+    txt: "How much faster an engineer using AI completes a development task. The capability is not in question and has not been for some time. What is in question is whether an organisation built for the old economics can absorb it." }
 ];
+const FACTS_NOTE = "Figures set the scenario. Corvus Technology Services is a composite, and its financials are illustrative.";
 
 /* Your top team. Tenure bars make the twenty-year problem visible before the
    question gets asked. `fit` is a 0–3 read on AI-era suitability. */
@@ -59,30 +58,31 @@ const TEAM = [
   { name: "A. Delacroix",  remit: "Consulting & Strategy",    years: 19, fit: 2 },
   { name: "J. Okonkwo",    remit: "Products & Platforms",     years:  3, fit: 3 }
 ];
-const TEAM_FOOT = "And eight others. Eleven of the fourteen have been here more than twenty years.";
+const TEAM_FOOT = "And eight others. Eleven of the fourteen have been here more than twenty years, which is typical of the industry and not a fact anybody inside it finds remarkable.";
 
-/* Market wires, keyed to the decision they follow (1-indexed). */
+/* Market wires, keyed to the decision they follow (1-indexed).
+   `src` is in-world: where the news reached your desk from. */
 const WIRES = {
   1: { fig: "30–50%",
        head: "AI is compressing delivery by a third to a half.",
        body: "The work still gets done. It takes fewer people and less time, and every contract you hold bills for people and time. Each efficiency you deliver this year reduces what you can invoice next year.",
-       src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
-  3: { fig: "$417 → $137",
+       src: "Delivery analytics · prepared for the board" },
+  3: { fig: "−67%",
        head: "The market has already made up its mind about the industry.",
-       body: "Accenture between December 2021 and July 2026, with revenue and profit growing the whole way. Your own numbers are still good. That has stopped being the thing anyone is looking at.",
-       src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
+       body: "Your listed competitors have lost two thirds of their combined market value since 2021, with revenue and profit growing the whole way. Your own numbers are still good. That has stopped being the thing anyone is looking at.",
+       src: "Sector index · your six listed competitors" },
   5: { fig: "$300m",
        head: "A competitor just dropped its client floor by an order of magnitude.",
-       body: "Accenture Edge targets firms between $300m and $3bn in revenue — a tier none of the large firms has served, because forty people on site never made sense below $3bn. If platform delivery makes that arithmetic work, the pricing pressure comes back up the chain to your largest accounts.",
-       src: "Sridhar Krishna, The Fall of IT Services Firms, 2026" },
+       body: "They announced a mid-market unit this morning, aimed at firms between $300m and $3bn in revenue — a tier none of the large firms has served, because forty people on site never made sense below $3bn. If platform delivery makes that arithmetic work, the pricing pressure comes back up the chain to your largest accounts.",
+       src: "Competitor announcement · this morning" },
   7: { fig: "Two of ten",
        head: "Two of your top ten clients will not renew on time and materials.",
        body: "Procurement has written to say that from next year they buy outcomes or nothing. Between them the accounts are worth $580m a year, and neither has asked to see your rate card.",
-       src: "Illustrative. Time-and-materials contracts are disappearing across the sector — Krishna, 2026" },
+       src: "Procurement correspondence · two accounts" },
   9: { fig: "Eleven months",
        head: "A client built in-house what you quoted eleven months to deliver.",
        body: "Fourteen years of relationship and a $40m proposal, and four of their engineers did it in a quarter. Their chief information officer sent you the demonstration himself, which is either courtesy or notice.",
-       src: "Illustrative" }
+       src: "Client demonstration · sent to you directly" }
 };
 
 const DECISIONS = [
@@ -407,8 +407,8 @@ const ENDINGS = {
     lesson: "Being right is not the same as being there when it becomes obvious." },
   exodus: { outcome: "lose", tag: "The exodus",
     head: "You made the right calls, and the people who could have delivered them left.",
-    body: "Unintended attrition ran far ahead of the intended kind. That distinction is the whole story here: removing people who no longer fit costs you very little, and losing the ones who would have built the next thing costs you everything. They did not leave because you changed the firm. They left because the change did not come with a reason for them to stay, and an AI-native competitor was willing to pay disproportionately for exactly them.",
-    lesson: "Managed attrition is the price of a decision. Unmanaged attrition is the failure of one." },
+    body: "Attrition among the people you most needed ran away from you. Removing people who no longer fit costs a firm very little and is not the number worth watching. Losing the ones who would have built the next thing costs it everything. They did not leave because you changed the firm. They left because the change arrived without a reason for them to stay, and a competitor was willing to pay disproportionately for exactly them.",
+    lesson: "The attrition that matters is never the attrition you chose." },
   contradiction: { outcome: "lose", tag: "The contradiction",
     head: "Every lever you pulled was defensible. Several were wired against each other.",
     body: "There is no single decision here you would struggle to justify to the board. The difficulty is that the firm received several instructions at once that cannot all be obeyed. Organisations resolve that by continuing to do what they were already doing, while reporting that the new thing is under way.",
@@ -435,11 +435,11 @@ const ENDINGS = {
     lesson: "Standing still is a decision, and it compounds at the speed of the technology." }
 };
 
-const SOURCES = [
-  ["Article",  "The Fall of IT Services Firms, hightechir.substack.com, 2026"],
-  ["Working paper", "Technological Disruption and Institutional Lag"],
-  ["Discussion document", "AI Adoption — Think Tasks, Not Jobs, 2024-22"],
-  ["Slide deck", "State of AI Governance, 2026"],
+const ABOUT = [
+  ["Format", "Ten decisions · three board reviews"],
+  ["The firm", "A composite. Not a real company"],
+  ["Financials", "Illustrative"],
+  ["Endings", "Ten. One meets both mandates"],
   ["Author", "Sridhar Krishna"],
   ["Institution", "The Takshashila Institution"]
 ];
