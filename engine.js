@@ -255,9 +255,8 @@ function screenBrief() {
           <div class="aside">
             <p style="font-size:17px;line-height:1.5">You will not be told how the board is weighing any of this. You will only see how much confidence it has left in you.</p>
           </div>
-          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-top:4px">
-            <button class="btn" id="start">Take the chair &rarr;</button>
-            <span class="meta">Seven minutes · keys 1–4 also work</span>
+          <div style="border-top:var(--rule);padding-top:16px;margin-top:4px">
+            <span class="meta">Read on &darr; &nbsp;·&nbsp; where the money comes from, and what has changed</span>
           </div>
         </div>
         <div class="stack-24">
@@ -312,7 +311,10 @@ function screenBrief() {
         </div>`).join("")}
       </div>
       <div class="source">${esc(FACTS_NOTE)}</div>
-      <div style="margin-top:32px"><button class="btn" id="start2">Begin &rarr;</button></div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:34px">
+        <button class="btn" id="start">Take the chair &rarr;</button>
+        <span class="meta">Seven minutes · keys 1–4 also work</span>
+      </div>
     </div>
   </section>`;
 
@@ -321,9 +323,10 @@ function screenBrief() {
   // player partway down the briefing instead of at the top of it.
   toTop();
 
-  const go = () => { $("#panel").hidden = false; renderPanel(); screenDecision(); };
-  $("#start").onclick = go; $("#start2").onclick = go;
-  $("#start").focus({ preventScroll: true });
+  // The only way in is the button at the foot of the briefing, so the conditions
+  // get read rather than skipped. Nothing is focused here and Enter does not start
+  // the game — both would let a player bypass the page.
+  $("#start").onclick = () => { $("#panel").hidden = false; renderPanel(); screenDecision(); };
 }
 
 function teamHTML() {
@@ -718,7 +721,7 @@ function missedBlock() {
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === "Enter") {
-    const b = $("#cont") || $("#start");
+    const b = $("#cont");           // deliberately not #start — the briefing is not skippable
     if (b) { e.preventDefault(); b.click(); }
     return;
   }

@@ -124,14 +124,18 @@ em.house { font-style: italic; color: var(--wine); }
 #panel[hidden] { display: none; }
 .panel-inner { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad-x); }
 
-.panel-top { display: grid; grid-template-columns: 1fr auto auto; align-items: stretch;
+/* Both rows run on the SAME four-column grid, and both are pulled out by the cell
+   padding so the first cell's text sits exactly on the page gutter. That way every
+   column is equal width and the vertical rules line up between the two rows. */
+.panel-top, .ledger { margin: 0 -16px; }
+.panel-top { display: grid; grid-template-columns: repeat(4, 1fr); align-items: stretch;
              border-bottom: 1px solid var(--ink-10); }
-.panel-id { padding: 13px 0 12px; }
+.panel-id { grid-column: span 2; padding: 13px 16px 12px; }
 .panel-firm { font-size: 14px; font-weight: 500; letter-spacing: -0.005em; }
 .panel-stage { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
                text-transform: uppercase; color: var(--ink-50); margin-top: 3px; }
 
-.headline { padding: 11px 0 10px 26px; border-left: var(--rule); min-width: 168px; }
+.headline { padding: 11px 16px 10px; border-left: 1px solid var(--ink-10); }
 .headline-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em;
                   text-transform: uppercase; color: var(--ink-50); display: block; }
 .headline-row { display: flex; align-items: baseline; gap: 9px; margin-top: 4px; }
@@ -148,10 +152,10 @@ em.house { font-style: italic; color: var(--wine); }
 .gauge-fill.danger { background: var(--negative); }
 .gauge-mark { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--ink); opacity: 0.55; }
 
-/* the ledger: four operating metrics, gapless ruled grid */
+/* the ledger: four operating metrics, gapless ruled grid on the same columns above */
 .ledger { display: grid; grid-template-columns: repeat(4, 1fr); }
 .ledger-cell { padding: 10px 16px 11px; border-left: 1px solid var(--ink-10); }
-.ledger-cell:first-child { border-left: none; padding-left: 0; }
+.ledger-cell:first-child { border-left: none; }
 .ledger-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em;
                 text-transform: uppercase; color: var(--ink-50); display: block; white-space: nowrap;
                 overflow: hidden; text-overflow: ellipsis; }
@@ -163,26 +167,25 @@ em.house { font-style: italic; color: var(--wine); }
 .ledger-spark { display: block; margin-top: 5px; }
 
 @media (max-width: 960px) {
-  .panel-top { grid-template-columns: 1fr 1fr; }
+  .panel-top { grid-template-columns: repeat(2, 1fr); }
   .panel-id { grid-column: 1 / -1; border-bottom: 1px solid var(--ink-10); }
-  .headline { padding-left: 0; border-left: none; min-width: 0; }
-  .headline + .headline { padding-left: 20px; border-left: var(--rule); }
+  .headline:first-of-type { border-left: none; }
   .ledger { grid-template-columns: repeat(2, 1fr); }
-  .ledger-cell:nth-child(odd) { padding-left: 0; border-left: none; }
+  .ledger-cell:nth-child(odd) { border-left: none; }
   .ledger-cell:nth-child(n+3) { border-top: 1px solid var(--ink-10); }
 }
 /* On a phone the panel is sticky, so it must stay short. The ledger becomes one
    horizontally scrollable row rather than a wrapping grid — every metric stays
    reachable without the header taking a third of the screen. */
 @media (max-width: 560px) {
-  .panel-id { padding: 8px 0 7px; }
+  .panel-top, .ledger { margin: 0 -14px; }
+  .panel-id { padding: 8px 14px 7px; }
   .panel-firm { font-size: 13px; }
-  .headline { padding: 8px 0 8px; }
-  .headline + .headline { padding-left: 16px; }
+  .headline { padding: 8px 14px; }
   .headline-fig { font-size: 21px; }
   .ledger { display: flex; overflow-x: auto; scrollbar-width: none; }
   .ledger::-webkit-scrollbar { display: none; }
-  .ledger-cell { flex: 0 0 auto; min-width: 116px; padding: 7px 14px 8px; }
+  .ledger-cell { flex: 0 0 auto; min-width: 118px; padding: 7px 14px 8px; }
   .ledger-spark { display: none; }
 }
 
