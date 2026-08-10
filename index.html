@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prove Them Wrong — an interactive decision game</title>
+<meta name="description" content="You are the chief executive of a large IT services firm. The market has halved your share price. You have eight decisions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TAKSHASHILA DESIGN TOKENS — §9 of the design language
+   ============================================================ */
+:root {
+  --wine:      #620d3c;
+  --wine-dark: #4a0a2e;
+  --wine-soft: #f5e6ec;
+  --gold:      #f1a222;
+  --gold-soft: #fcf0d9;
+
+  --paper:  #FFFFFF;
+  --deep:   #F7F5F2;
+  --ink:    #171413;
+  --ink-70: rgba(23,20,19,0.70);
+  --ink-50: rgba(23,20,19,0.50);
+  --ink-20: rgba(23,20,19,0.16);
+  --ink-10: rgba(23,20,19,0.08);
+
+  --cat-1: #620d3c; --cat-2: #f1a222; --cat-3: #2f6b6b;
+  --positive: #2f6b4a;
+  --negative: #a3282d;
+
+  --sans: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --max:   1240px;
+  --pad-x: 40px;
+  --rule:  1px solid var(--ink-20);
+
+  /* inverted ground */
+  --on-dark-body: rgba(255,255,255,0.85);
+  --on-dark-meta: rgba(255,255,255,0.55);
+  --on-dark-rule: rgba(255,255,255,0.18);
+}
+@media (max-width: 960px) { :root { --pad-x: 24px; } }
+@media (max-width: 560px) { :root { --pad-x: 18px; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+h1, h2, h3 { font-weight: 400; margin: 0; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--wine); outline-offset: 2px; }
+.dark :focus-visible { outline-color: var(--gold); }
+
+/* ---------- shared type roles ---------- */
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-50);
+}
+.meta {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-50);
+}
+.lede { font-size: 22px; font-weight: 300; line-height: 1.45; color: var(--ink-70); }
+.num  { font-variant-numeric: tabular-nums; }
+em.house { font-style: italic; color: var(--wine); }
+.dark em.house { color: var(--gold); font-style: italic; }
+
+.container { max-width: var(--max); margin: 0 auto; }
+.section { padding: 64px var(--pad-x); border-bottom: var(--rule); }
+.section.deep { background: var(--deep); }
+.section.dark { background: var(--ink); border-bottom-color: var(--on-dark-rule); }
+.section.wine { background: var(--wine); border-bottom-color: var(--on-dark-rule); }
+.dark { color: var(--on-dark-body); }
+.dark h1, .dark h2, .dark h3 { color: #fff; }
+.dark .eyebrow, .dark .meta { color: var(--on-dark-meta); }
+@media (max-width: 560px) { .section { padding: 44px var(--pad-x); } }
+
+/* ---------- buttons ---------- */
+.btn {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 14px 28px; border: none;
+  background: var(--wine); color: #fff; transition: background 0.15s ease;
+}
+.btn:hover { background: var(--wine-dark); }
+.btn.accent { background: var(--gold); color: var(--ink); font-weight: 600; }
+.btn.accent:hover { background: #dc9119; }
+.btn.ghost { background: none; border: var(--rule); color: var(--ink); }
+.btn.ghost:hover { background: var(--deep); }
+.dark .btn.ghost { border-color: var(--on-dark-rule); color: #fff; }
+.dark .btn.ghost:hover { background: rgba(255,255,255,0.06); }
+
+/* ============================================================
+   THE INSTRUMENT PANEL — persistent header during play
+   ============================================================ */
+#panel { border-bottom: var(--rule); background: var(--paper); position: sticky; top: 0; z-index: 20; }
+#panel[hidden] { display: none; }
+.panel-grid {
+  max-width: var(--max); margin: 0 auto; padding: 0 var(--pad-x);
+  display: grid; grid-template-columns: 1fr auto auto; align-items: stretch;
+}
+.panel-cell { padding: 16px 28px 15px; border-left: var(--rule); }
+.panel-cell:first-child { padding-left: 0; border-left: none; }
+.panel-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+               text-transform: uppercase; color: var(--ink-50); display: block; margin-bottom: 5px; }
+.panel-firm { font-size: 15px; font-weight: 500; letter-spacing: -0.005em; }
+.panel-sub  { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--ink-50); margin-top: 3px; }
+
+.readout { display: flex; align-items: baseline; gap: 10px; }
+.readout-fig { font-size: 30px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; }
+.readout-delta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+.delta-up   { color: var(--positive); }
+.delta-down { color: var(--negative); }
+.delta-flat { color: var(--ink-50); }
+#spark { display: block; margin-top: 8px; }
+
+/* the unlabelled row — the whole mystery lives here */
+.panel-cell.enigma { min-width: 150px; }
+.panel-label.blank { color: var(--ink-20); letter-spacing: 0.02em; }
+.enigma-bar { height: 3px; background: var(--ink-10); margin-top: 10px; position: relative; }
+.enigma-fill { position: absolute; inset: 0 auto 0 0; background: var(--wine); transition: width 0.5s ease; }
+
+@media (max-width: 960px) {
+  .panel-grid { grid-template-columns: 1fr auto; }
+  .panel-cell.firm-cell { grid-column: 1 / -1; border-left: none; padding-left: 0;
+                          border-bottom: var(--rule); padding-bottom: 12px; }
+  .panel-cell.price-cell { padding-left: 0; border-left: none; }
+}
+/* On a phone the panel is sticky and must not eat the screen: drop the decorative
+   line, compact the padding, and let the two readouts share one row. */
+@media (max-width: 560px) {
+  .panel-cell { padding: 9px 12px 10px; }
+  .panel-cell.firm-cell { padding-bottom: 8px; }
+  .panel-firm { display: none; }
+  .panel-label { margin-bottom: 3px; }
+  .panel-sub { margin-top: 0; }
+  .readout-fig { font-size: 22px; }
+  .panel-cell.enigma { min-width: 108px; }
+  .enigma-bar { margin-top: 7px; }
+  #spark { display: none; }
+}
+
+/* ============================================================
+   TITLE SCREEN
+   ============================================================ */
+.display {
+  font-size: 72px; font-weight: 400; line-height: 0.98; letter-spacing: -0.025em;
+  margin: 22px 0 0;
+}
+@media (max-width: 960px) { .display { font-size: 48px; } }
+@media (max-width: 560px) { .display { font-size: 40px; } }
+
+.split { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: start; }
+@media (max-width: 960px) { .split { grid-template-columns: 1fr; gap: 36px; } }
+
+.deftable { width: 100%; border-collapse: collapse; }
+.deftable td { padding: 9px 0; vertical-align: baseline; border-bottom: 1px solid var(--ink-10); }
+.deftable td:first-child {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-50); width: 58%; padding-right: 16px;
+}
+.deftable td:last-child { text-align: right; font-size: 15px; }
+.dark .deftable td { border-bottom-color: var(--on-dark-rule); }
+.dark .deftable td:first-child { color: var(--on-dark-meta); }
+
+.aside { border-left: 2px solid var(--wine); padding: 2px 0 2px 28px; }
+.dark .aside { border-left-color: var(--gold); }
+
+.opening-chart { border: var(--rule); padding: 26px 28px 20px; background: var(--paper); }
+
+/* ============================================================
+   DECISION SCREEN
+   ============================================================ */
+.stage { padding: 34px var(--pad-x) 48px; }
+@media (max-width: 560px) { .stage { padding: 26px var(--pad-x) 44px; } }
+
+.stage-head { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; margin-bottom: 12px; }
+.dcode { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--wine); }
+.dtitle { font-size: 40px; font-weight: 400; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 14px; }
+@media (max-width: 560px) { .dtitle { font-size: 30px; } }
+.dcontext { font-size: 18px; font-weight: 300; line-height: 1.45; color: var(--ink-70); max-width: 66ch; }
+.dquestion { font-size: 18px; font-weight: 500; line-height: 1.3; margin-top: 18px; padding-top: 15px; border-top: 2px solid var(--ink); }
+
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 18px; }
+@media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+
+.card {
+  border: var(--rule); background: var(--paper); padding: 20px 24px 19px;
+  text-align: left; display: flex; flex-direction: column; gap: 7px; width: 100%;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.3s ease;
+}
+.card:hover:not(.locked) { background: var(--deep); }
+.card-key { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--wine); }
+.card-title { font-size: 21px; font-weight: 500; line-height: 1.2; letter-spacing: -0.005em; }
+.card-body { font-size: 14px; line-height: 1.6; color: var(--ink-70); }
+.card.chosen { border-color: var(--ink); border-width: 2px; padding: 19px 23px 18px; background: var(--paper); }
+.card.dimmed { opacity: 0.26; }
+.card.locked { cursor: default; }
+
+/* budget slider */
+.budget { border: var(--rule); padding: 26px 28px 24px; margin-top: 24px; background: var(--deep); }
+.budget-top { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+.budget-fig { font-size: 44px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; }
+.budget-note { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+               text-transform: uppercase; color: var(--ink-50); }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; margin-top: 22px;
+                    background: transparent; height: 22px; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 3px; background: var(--ink-20); }
+input[type=range]::-moz-range-track { height: 3px; background: var(--ink-20); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+  width: 3px; height: 22px; background: var(--wine); margin-top: -9px; border: none; border-radius: 0; }
+input[type=range]::-moz-range-thumb { width: 3px; height: 22px; background: var(--wine);
+  border: none; border-radius: 0; }
+.budget-scale { display: flex; justify-content: space-between; margin-top: 2px; }
+
+/* the wire note after a choice */
+#after { scroll-margin-top: 132px; }
+.wire { border-top: 2px solid var(--ink); margin-top: 24px; padding-top: 18px; }
+.wire-src { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
+            text-transform: uppercase; color: var(--ink-50); }
+.wire-text { font-size: 20px; font-weight: 300; line-height: 1.45; margin-top: 10px; max-width: 68ch; }
+.wire-foot { display: flex; justify-content: space-between; align-items: center; gap: 20px;
+             margin-top: 24px; flex-wrap: wrap; }
+
+/* ============================================================
+   REVEAL
+   ============================================================ */
+.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--on-dark-rule); margin-top: 36px; }
+.kpi { padding: 26px 28px 24px; border-right: 1px solid var(--on-dark-rule); }
+.kpi:last-child { border-right: none; }
+.kpi-fig { font-size: 44px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; color: var(--gold); }
+.kpi-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+             color: var(--on-dark-meta); margin-top: 10px; display: block; }
+.kpi-verdict { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+               margin-top: 8px; display: block; }
+.v-hit  { color: #7fd39b; }
+.v-miss { color: #e88c8f; }
+@media (max-width: 720px) { .kpi-strip { grid-template-columns: 1fr; }
+  .kpi { border-right: none; border-bottom: 1px solid var(--on-dark-rule); }
+  .kpi:last-child { border-bottom: none; } }
+
+.ruled-grid { border: var(--rule); display: grid; grid-template-columns: repeat(2, 1fr); }
+.ruled-grid > div { padding: 22px 24px; border-right: var(--rule); border-bottom: var(--rule); }
+.ruled-grid > div:nth-child(2n) { border-right: none; }
+.ruled-grid > div:nth-last-child(-n+2) { border-bottom: none; }
+@media (max-width: 720px) {
+  .ruled-grid { grid-template-columns: 1fr; }
+  .ruled-grid > div { border-right: none; }
+  .ruled-grid > div:nth-last-child(2) { border-bottom: var(--rule); }
+}
+.link-item { display: flex; gap: 14px; align-items: baseline; }
+.link-code { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--wine); flex: none; }
+/* The shape carries the meaning, not the colour — marigold fails as small text
+   on a light ground, and negative red would sit too close to the wine item code. */
+.x-mark { color: var(--ink); font-weight: 600; }
+
+.chart-wrap { margin-top: 30px; overflow-x: auto; }
+.chart-wrap svg { display: block; min-width: 560px; }
+.source { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-50); margin-top: 14px; }
+
+.rowlist { border-top: 2px solid var(--ink); margin-top: 22px; }
+.rowlist-item { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: baseline;
+                padding: 14px 0; border-bottom: var(--rule); }
+.rowlist-item .t { font-size: 15px; }
+.rowlist-item .d { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+                   text-transform: uppercase; color: var(--ink-50); }
+
+.tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+       padding: 4px 10px; border: var(--rule); display: inline-block; }
+.tag.wine { background: var(--wine); color: #fff; border-color: var(--wine); }
+.tag.gold { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 600; }
+
+.fade-in { animation: fade 0.32s ease both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .fade-in { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+.stack-24 > * + * { margin-top: 24px; }
+.stack-16 > * + * { margin-top: 16px; }
+.stack-12 > * + * { margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header id="panel" hidden>
+  <div class="panel-grid">
+    <div class="panel-cell firm-cell">
+      <span class="panel-label">Corvus Technology Services</span>
+      <div class="panel-firm" id="p-quarter">Board mandate · eighteen months</div>
+      <div class="panel-sub" id="p-progress">DECISION 01 / 08</div>
+    </div>
+    <div class="panel-cell price-cell">
+      <span class="panel-label">Share price, indexed</span>
+      <div class="readout">
+        <span class="readout-fig num" id="p-price">62.0</span>
+        <span class="readout-delta delta-flat" id="p-delta">—</span>
+      </div>
+      <svg id="spark" width="176" height="30" viewBox="0 0 176 30" aria-hidden="true"></svg>
+    </div>
+    <div class="panel-cell enigma">
+      <span class="panel-label blank">—————————</span>
+      <div class="readout">
+        <span class="readout-fig num" id="p-lag">34</span>
+        <span class="readout-delta delta-flat" id="p-lagdelta">—</span>
+      </div>
+      <div class="enigma-bar"><span class="enigma-fill" id="p-lagbar" style="width:63%"></span></div>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<script>
+"use strict";
+
+/* ============================================================================
+   1. CONTENT
+   Everything the game says lives in this block. Weights sit beside the copy
+   they belong to, so a line can be rewritten without touching the engine.
+
+     signal    — what the market hears this quarter        (roughly -1 … 4)
+     substance — what actually moves the firm's institutions (roughly -1 … 4)
+     pain      — internal disruption, attrition, execution risk (0 … 4)
+   ============================================================================ */
+
+const FIRM = {
+  name: "Corvus Technology Services",
+  people: "340,000",
+  revenue: "$22bn",
+  history: [100, 97, 91, 84, 74, 68, 62]   // share price, indexed, last seven quarters
+};
+
+const DECISIONS = [
+  {
+    code: "M.01", eyebrow: "The machine",
+    title: "The incentive",
+    context: "Two hundred and forty profit-centre heads are paid on revenue and utilisation. Every one of them made their number last year. The share price fell 38% anyway.",
+    question: "How do you pay them this year?",
+    options: [
+      { label: "Hold the line, add a metric",
+        body: "Revenue and utilisation stay. Every account additionally reports the hours AI saved.",
+        signal: 2, substance: 0, pain: 0,
+        wire: "You have asked two hundred and forty people to report a number that shrinks the number they are paid on. They will report it." },
+      { label: "Pay on gross margin, not revenue",
+        body: "Growing a $40m account by adding forty people stops counting as growth.",
+        signal: 1, substance: 2, pain: 1,
+        wire: "Margin is harder to game than revenue. It is still a number that rises when you bill more hours." },
+      { label: "Pay a reuse royalty",
+        body: "Deploy another unit's asset and keep the margin. Build one others deploy and earn on it. Utilisation leaves the bonus entirely.",
+        signal: 0, substance: 4, pain: 4,
+        wire: "Nine of your top thirty partners have asked what this means for them. Two have taken recruiter calls this week." },
+      { label: "Carve out an AI unit",
+        body: "Its own profit and loss, its own pay scales, its own hiring. The core business continues unchanged.",
+        signal: 3, substance: 0, pain: 1,
+        wire: "The unit will be well funded and much admired. It will also be asked to outrun a machine that is not being asked to change." }
+    ]
+  },
+  {
+    code: "M.02", eyebrow: "The machine",
+    title: "The pyramid",
+    context: "You hire 38,000 engineering graduates a year and train them to write code. The model now writes that code at roughly the standard of your second-year engineer, and it does not go home.",
+    question: "What do you do with next year's intake?",
+    options: [
+      { label: "Same intake, retrained",
+        body: "Hire 38,000. Put them through a twelve-week AI tools programme. Deploy as before.",
+        signal: 2, substance: 0, pain: 0,
+        wire: "You have retrained thirty-eight thousand people for the layer that seems to be disappearing fastest." },
+      { label: "Halve the intake, move the money",
+        body: "19,000 hires. The saving funds the platform organisation instead.",
+        signal: 1, substance: 3, pain: 3,
+        wire: "Four state governments and around two hundred campuses noticed within a fortnight. So did the press." },
+      { label: "Same number, different people",
+        body: "Still 38,000, but hired for domain, data and verification — the ability to specify work and to prove it came out right.",
+        signal: 1, substance: 4, pain: 2,
+        wire: "Your recruiters have never screened for this. Neither have most of the colleges that supply you." },
+      { label: "Stop campus hiring. Buy capability",
+        body: "Acquire three specialist firms of roughly two hundred people each.",
+        signal: 3, substance: 1, pain: 3,
+        wire: "Six hundred people joined a firm of three hundred and forty thousand. The firm will decide which of them changes." }
+    ]
+  },
+  {
+    code: "M.03", eyebrow: "The machine",
+    title: "The budget", type: "budget",
+    context: "Platform and reusable-asset spend runs at 6% of revenue — about $1.3bn. Some of it is handed back every fourth quarter to make the number.",
+    question: "Set the number. Then say where it comes from.",
+    options: [
+      { label: "From margin. Tell the street",
+        body: "Guidance comes down two points and you explain why.",
+        gate: 0.8, signal: 1, substance: 1, pain: 2,
+        wire: "The street will decide within a day whether a margin cut is an investment or an excuse." },
+      { label: "From the bench and the year-end reserve",
+        body: "Money that already exists, without a new line on the guidance.",
+        gate: 0.6, signal: 0, substance: 0.5, pain: 1,
+        wire: "It is real money. It is also the first money to disappear when a quarter comes up short." },
+      { label: "From clients — build it inside their programmes",
+        body: "The assets get built, and the client pays for the building.",
+        gate: 0.0, signal: 1.5, substance: 0, pain: 0,
+        wire: "Three of your largest clients have asked who will own the asset afterwards. You know which answer they want." },
+      { label: "A ring-fenced capital line",
+        body: "Approved by the board, reported separately, closed to the quarter.",
+        gate: 1.0, signal: 0, substance: 2, pain: 2,
+        wire: "For the first time, nobody can reach into it in the last three weeks of December." }
+    ]
+  },
+  {
+    code: "M.04", eyebrow: "The offer",
+    title: "The question",
+    context: "Your largest client's chief information officer — $310m a year, eleven years — puts it plainly. “I have forty engineers and a frontier model subscription. Tell me what I still need you for.”",
+    question: "What do you say?",
+    options: [
+      { label: "Scale",
+        body: "“What your forty do, we do two hundred times over, in every market you operate in.”",
+        signal: 2, substance: -1, pain: 0,
+        wire: "You answered a question about capability with a number of people. He has heard that answer before, at a lower price." },
+      { label: "The last mile",
+        body: "“Your forty can build the demonstration. We put it into production across fourteen countries, nine regulators and forty years of undocumented systems.”",
+        signal: 2, substance: 3, pain: 1,
+        wire: "Honest, and probably true for about six years. He is already asking what happens after that." },
+      { label: "The corpus",
+        body: "“We have run your industry's processes for twenty years across sixty clients. We hold the evaluation sets, the failure taxonomies, the ground truth. You have one company's data.”",
+        signal: 1, substance: 4, pain: 2,
+        wire: "It may be the only thing you have that he cannot buy. It is also not yet assembled — it sits in sixty separate programmes." },
+      { label: "The risk",
+        body: "“We will carry it. Defined outcome, our balance sheet. If it fails, you do not pay.”",
+        signal: 3, substance: 3, pain: 4,
+        wire: "Your finance director has asked how much of the firm you intend to stand behind that sentence." }
+    ]
+  },
+  {
+    code: "M.05", eyebrow: "The offer",
+    title: "The price",
+    context: "84% of revenue is billed by time and materials. The hour is the unit you sell, and the unit is shrinking.",
+    question: "How do you sell the work?",
+    options: [
+      { label: "Keep the hour, raise the rate",
+        body: "Premium rates for AI-augmented pods. Fewer hours, more per hour.",
+        signal: 2, substance: 0, pain: 0,
+        wire: "You are now selling a smaller number of more expensive hours. Every analyst covering you can do that arithmetic." },
+      { label: "Price the outcome",
+        body: "A defined result against a service level. What it costs you to deliver is your problem.",
+        signal: 2, substance: 3, pain: 3,
+        wire: "Margin now depends on your own estimates being right, which has not always been a strength." },
+      { label: "Sell a subscription",
+        body: "Per process, per month, on the platform. Recurring, and unrelated to headcount.",
+        signal: 3, substance: 4, pain: 4,
+        wire: "Reported revenue may fall for six quarters before it rises. The market has a name for that curve and it is not a kind one." },
+      { label: "Take a share of the saving",
+        body: "You keep a fixed percentage of what the client no longer spends.",
+        signal: 3, substance: 2, pain: 3,
+        wire: "Everyone agrees the savings are real. Nobody has yet agreed how they will be measured." }
+    ]
+  },
+  {
+    code: "M.06", eyebrow: "The shape",
+    title: "The org",
+    context: "Fourteen geographic market units, four delivery hubs. An asset built in Bengaluru for a Dutch bank is invisible to the team in São Paulo, and nobody is worse off for that.",
+    question: "What owns the asset?",
+    options: [
+      { label: "A global centre of excellence",
+        body: "Reports to you. Dotted line into the market units. No profit and loss of its own.",
+        signal: 3, substance: 0, pain: 0,
+        wire: "A centre of excellence without a profit and loss can recommend. It cannot make anybody do anything." },
+      { label: "Flip the axis to industry verticals",
+        body: "Verticals hold the profit and loss. Geography becomes sales coverage.",
+        signal: 2, substance: 3, pain: 4,
+        wire: "Eighteen months of disruption, and the second reorganisation this decade. Your people know the pattern." },
+      { label: "Appoint product general managers",
+        body: "Twelve of them. Each owns an asset's roadmap, margin and adoption across every market. The market units become their customers.",
+        signal: 1, substance: 4, pain: 3,
+        wire: "You have created twelve people whose job is to tell your most senior revenue owners what to sell." },
+      { label: "Two speeds, with one rule",
+        body: "Leave the machine alone. Build the product organisation beside it. Any work done twice must migrate.",
+        signal: 1, substance: 3, pain: 2,
+        wire: "The rule is the whole idea. Rules of that kind are usually enforced for about four quarters." }
+    ]
+  },
+  {
+    code: "M.07", eyebrow: "The shape",
+    title: "The map",
+    context: "68% of revenue comes from North America and Western Europe, where every client can hire the same models on the same morning you can, at the same price.",
+    question: "Where do you plant the next flag?",
+    options: [
+      { label: "Deeper into the United States",
+        body: "It is where the budgets are, and where your multiple is set.",
+        signal: 2, substance: 0, pain: 0,
+        wire: "It is also where the client can now do it themselves, and increasingly where they would rather." },
+      { label: "India and South-East Asia",
+        body: "Enormous unserved process work, and clients with no legacy estate to protect.",
+        signal: 1, substance: 4, pain: 2,
+        wire: "Price points are a fraction of what you are used to. AI is the only thing that makes the cost to serve survive them." },
+      { label: "The Gulf and Africa",
+        body: "Sovereign programmes. States buying capability wholesale, at state scale, on twenty-year horizons.",
+        signal: 3, substance: 3, pain: 3,
+        wire: "Long contracts and political counterparties. Both cut in whichever direction the politics runs." },
+      { label: "Japan and the German Mittelstand",
+        body: "Deep process knowledge, ageing workforces, an acute shortage of people. AI as substitution rather than arbitrage.",
+        signal: 1, substance: 3, pain: 2,
+        wire: "Slow to sell and hard to leave once sold. Neither of those is a quarterly virtue." }
+    ]
+  },
+  {
+    code: "M.08", eyebrow: "The proof",
+    title: "The story",
+    context: "Analyst day is in six weeks. Four of your competitors have announced an AI investment programme this quarter, and three of those stocks have since given the gain back.",
+    question: "What goes on the first slide?",
+    options: [
+      { label: "A number with a currency sign",
+        body: "$3bn over three years. Comfortably the largest of the five.",
+        signal: 4, substance: 0, pain: 0,
+        wire: "The stock moved. So did four others this quarter, for the same reason, and most of them did not keep it." },
+      { label: "A number with a date attached",
+        body: "40% of revenue non-linear by FY29. You will be asked about it every ninety days until then.",
+        signal: 3, substance: 3, pain: 3,
+        wire: "You have handed the market a stick. That is usually what makes them believe the carrot." },
+      { label: "One client's profit and loss",
+        body: "What the work cost before, what it costs now, what you kept. Unglamorous, and checkable.",
+        signal: 2, substance: 3, pain: 1,
+        wire: "Two analysts called it the most useful slide of the day. Neither of them changed their rating." },
+      { label: "Nothing new",
+        body: "Report the numbers. Let the next four quarters make the argument for you.",
+        signal: -1, substance: 1, pain: 2,
+        wire: "Silence is a position. It is rarely read as a confident one." }
+    ]
+  }
+];
+
+/* Which options interact with which. Checked after the run; named in the debrief.
+   `pick(i)` returns the option index chosen for decision i (0-based). */
+const CONTRADICTIONS = [
+  { codes: ["M.05","M.01"], test: p => p[4] === 2 && p[0] === 0,
+    text: "You asked the sales force to sell a subscription that shrinks their bonus." },
+  { codes: ["M.04","M.03"], test: (p, s) => p[3] === 2 && s.platformPct < 12,
+    text: "You told the client the corpus was your advantage, and funded it at less than 12%." },
+  { codes: ["M.01","M.06"], test: p => p[0] === 2 && p[5] === 0,
+    text: "You paid for reuse and left nobody accountable for the thing being reused." },
+  // Mutually exclusive with the rule above: under 12% the problem is that you did not
+  // fund the corpus; at or above it, the problem is whose money built it.
+  { codes: ["M.03","M.04"], test: (p, s) => p[2] === 2 && p[3] === 2 && s.platformPct >= 12,
+    text: "You built the corpus with the clients' money. They will own what they paid for." },
+  { codes: ["M.02","M.05"], test: p => p[1] === 0 && p[4] === 2,
+    text: "A subscription business does not need thirty-eight thousand more people who write code." },
+  { codes: ["M.06","M.01"], test: p => p[5] === 2 && p[0] === 0,
+    text: "Twelve product managers, and not one revenue owner paid to listen to them." },
+  { codes: ["M.08","—"], test: (p, s) => p[7] === 0 && s.substance < 12,
+    text: "You announced three billion dollars of change without having made very much." }
+];
+
+const COHERENCES = [
+  { codes: ["M.01","M.06"], test: p => p[0] === 2 && (p[5] === 1 || p[5] === 2),
+    text: "The money and the accountability point the same way." },
+  { codes: ["M.05","M.03"], test: (p, s) => p[4] === 2 && s.platformPct >= 15,
+    text: "You are selling a product, and you are funding one." },
+  { codes: ["M.02","M.03"], test: (p, s) => p[1] === 1 && s.platformPct >= 15,
+    text: "The reduction paid for the rebuild, rather than the rebuild coming out of margin." },
+  { codes: ["M.04","M.06"], test: p => p[3] === 2 && p[5] === 2,
+    text: "Somebody now owns the corpus, which is the difference between an asset and a claim." },
+  { codes: ["M.07","M.05"], test: p => (p[6] === 1 || p[6] === 2) && (p[4] === 1 || p[4] === 2),
+    text: "New markets bought on a new basis, rather than the old model at a lower rate." },
+  { codes: ["M.02","M.04"], test: p => p[1] === 2 && p[3] === 2,
+    text: "The people you hired are the ones who can assemble the thing you promised." },
+  { codes: ["M.08","—"], test: (p, s) => p[7] === 1 && s.substance >= 16,
+    text: "You gave the market a commitment you had already built the means to keep." }
+];
+
+const ENDINGS = {
+  break: { tag: "The break",
+    head: "You were right. You were also gone by the sixth quarter.",
+    body: "Almost every call you made moved the firm. Almost none of them gave anyone outside it a reason to wait. Two hundred and forty people were asked to give up how they are measured, and the market was given nothing to hold on to in the meantime. Your successor inherited a firm that was genuinely further along, and took the credit for it in eighteen months. This is a common way for a correct strategy to end.",
+    lesson: "Substance without a signal buys you no time, and time is the only thing a rebuild actually needs." },
+  contradiction: { tag: "The contradiction",
+    head: "Every lever you pulled was defensible. Some of them were wired against each other.",
+    body: "There is no single decision here you would struggle to justify to the board. The difficulty is that the firm received several instructions at once that cannot all be obeyed. Organisations resolve that by continuing to do what they were already doing, while reporting that the new thing is under way.",
+    lesson: "A strategy is not the sum of its decisions. It is whether the decisions permit each other." },
+  rerating: { tag: "The re-rating",
+    head: "You changed the shape of the revenue, and the multiple followed it.",
+    body: "The near-term gain was bought with things you could show. The doubling came from somewhere else — from the fact that by the second year a growing share of revenue no longer moved in step with headcount. That is the number the market was actually pricing all along, and it is why the share price fell before anything had gone wrong.",
+    lesson: "The multiple follows the shape of the revenue, not its size." },
+  quiet: { tag: "The quiet rebuild",
+    head: "The board nearly replaced you in month seven.",
+    body: "You spent the first year making changes almost nobody outside the firm could see, and the share price behaved accordingly. What you were building was real, and by the second year it was visible in the numbers rather than in the announcements. Two directors have since described the strategy as theirs.",
+    lesson: "Institutional change is invisible for about as long as it takes to be irreversible." },
+  announcement: { tag: "The announcement",
+    head: "You bought the quarter. The quarter was not for sale.",
+    body: "The near-term target was met and met comfortably. Underneath it the firm went on rewarding exactly what it rewarded before — billed hours, sold work, people on projects — so nothing that produced the original problem was removed. By the second year the market had stopped grading the announcement and started grading the accounts.",
+    lesson: "A firm will do what it pays people to do, whatever it has told the market it is doing." },
+  pilot: { tag: "The pilot programme",
+    head: "Forty pilots, one centre of excellence, and a firm that works exactly as it did before.",
+    body: "You moved on every front and committed on none. There is now an AI initiative in each of the fourteen market units, a slide that lists them, and a quarterly newsletter. Not one of them changed how anybody is paid, hired, organised or priced, so each of them stayed a pilot. This may be the most common outcome in the industry and the hardest to see from inside, because at no single point does anyone make an obviously wrong decision.",
+    lesson: "A pilot that cannot change the system it runs inside is a demonstration, not a transition." },
+  custodian: { tag: "The custodian",
+    head: "You handed on a smaller version of what you were given.",
+    body: "Nothing here was reckless, and very little of it was consequential. The firm remains capable, well run and priced as though its best years were the ones behind it. The technology moved through the whole period, and the distance between what it allowed and what your organisation permitted grew every quarter you did not close it.",
+    lesson: "Standing still is a decision, and it compounds at the speed of the technology." }
+};
+
+/* ============================================================================
+   2. ENGINE
+   ============================================================================ */
+
+const LAG_START = 34;      // months the firm already trails the technology
+const DRIFT = 2;           // capability advances every round whether or not you act
+const LAG_PER_SUBSTANCE = 1.45;
+const PRICE_BASE = 62;
+
+const S = {
+  i: 0, picks: [], perRound: [],
+  signal: 0, substance: 0, pain: 0,
+  platformPct: 6, awaitingContinue: false,
+  spark: FIRM.history.slice()
+};
+
+const $ = sel => document.querySelector(sel);
+const app = $("#app");
+const panel = $("#panel");
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+/* Lag after k rounds. Drift pushes it up; substance pulls it down. */
+function lagAt(rounds, substance) {
+  return clamp(LAG_START + DRIFT * rounds - LAG_PER_SUBSTANCE * substance, 4, 54);
+}
+/* Share price after k rounds. This is exactly the Q1 formula, revealed in pieces. */
+function priceAt(rounds, signal) {
+  return PRICE_BASE * (1 + 0.019 * (signal - rounds));
+}
+function q1Mult(signal) { return priceAt(8, signal) / PRICE_BASE; }
+
+function coherenceCheck() {
+  const p = S.picks;
+  const hits = COHERENCES.filter(r => r.test(p, S));
+  const misses = CONTRADICTIONS.filter(r => r.test(p, S));
+  const factor = clamp(1 + 0.10 * hits.length - 0.16 * misses.length, 0.5, 1.5);
+  return { hits, misses, factor };
+}
+
+function finalScores() {
+  const c = coherenceCheck();
+  const lag = lagAt(8, S.substance);
+  const q1 = q1Mult(S.signal);
+  const y2 = clamp((0.55 + (54 - lag) / 50 * 1.9) * c.factor, 0.35, 3.0);
+  // Evaluated top-down. The order is the argument: being removed from the chair
+  // outranks any result, and an incoherent strategy is judged before a scored one.
+  let key;
+  if (S.pain >= 17 && S.signal <= 11)              key = "break";
+  else if (c.misses.length >= 3)                   key = "contradiction";
+  else if (y2 >= 2.0 && q1 >= 1.20)                key = "rerating";
+  else if (y2 >= 1.70 && q1 < 1.14)                key = "quiet";
+  else if (q1 >= 1.16 && y2 < 1.30)                key = "announcement";
+  else if (S.substance < 12 && S.signal < 14)      key = "custodian";
+  else                                             key = "pilot";
+  return { c, lag, q1, y2, key, ending: ENDINGS[key] };
+}
+
+/* ---------- instrument panel ---------- */
+function drawSpark() {
+  const svg = $("#spark"); if (!svg) return;
+  const pts = S.spark, W = 176, H = 30, pad = 2;
+  const lo = Math.min(...pts) - 4, hi = Math.max(...pts) + 4;
+  const x = i => pad + i * (W - pad * 2) / Math.max(1, FIRM.history.length + 7);
+  const y = v => H - pad - (v - lo) / (hi - lo) * (H - pad * 2);
+  const d = pts.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+  const cx = x(pts.length - 1), cy = y(pts[pts.length - 1]);
+  const hist = FIRM.history.length - 1;
+  svg.innerHTML =
+    `<line x1="${x(hist)}" y1="0" x2="${x(hist)}" y2="${H}" stroke="rgba(23,20,19,0.16)" stroke-width="1"/>` +
+    `<path d="${d}" fill="none" stroke="#620d3c" stroke-width="1.25"/>` +
+    `<rect x="${(cx - 2).toFixed(1)}" y="${(cy - 2).toFixed(1)}" width="4" height="4" fill="#f1a222"/>`;
+}
+
+function setDelta(el, v, digits) {
+  const s = (v > 0 ? "+" : v < 0 ? "−" : "");
+  el.textContent = Math.abs(v) < 0.05 ? "—" : s + Math.abs(v).toFixed(digits);
+  el.className = "readout-delta " + (v > 0.05 ? "delta-up" : v < -0.05 ? "delta-down" : "delta-flat");
+}
+/* the unlabelled meter has no good/bad colouring — that would give it away */
+function setLagDelta(el, v) {
+  const s = (v > 0 ? "+" : v < 0 ? "−" : "");
+  el.textContent = Math.abs(v) < 0.5 ? "—" : s + Math.abs(Math.round(v));
+  el.className = "readout-delta delta-flat";
+}
+
+function countTo(el, from, to, digits) {
+  const t0 = performance.now(), dur = 520;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = (from + (to - from) * e).toFixed(digits);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function updatePanel(prev) {
+  const rounds = S.picks.length;
+  const price = priceAt(rounds, S.signal);
+  const lag = lagAt(rounds, S.substance);
+  $("#p-progress").textContent = rounds >= 8
+    ? "EIGHT OF EIGHT TAKEN"
+    : "DECISION " + String(rounds + 1).padStart(2, "0") + " / 08";
+  if (prev) {
+    countTo($("#p-price"), prev.price, price, 1);
+    countTo($("#p-lag"), prev.lag, lag, 0);
+    setDelta($("#p-delta"), price - prev.price, 1);
+    setLagDelta($("#p-lagdelta"), lag - prev.lag);
+  } else {
+    $("#p-price").textContent = price.toFixed(1);
+    $("#p-lag").textContent = Math.round(lag);
+  }
+  $("#p-lagbar").style.width = ((lag - 4) / 50 * 100).toFixed(1) + "%";
+  S.spark = FIRM.history.concat(
+    S.perRound.map((_, k) => priceAt(k + 1, S.perRound.slice(0, k + 1).reduce((a, r) => a + r.signal, 0)))
+  );
+  drawSpark();
+}
+
+/* ============================================================================
+   3. SCREENS
+   ============================================================================ */
+
+function screenTitle() {
+  panel.hidden = true;
+  const h = FIRM.history;
+  const W = 620, H = 150, lo = 52, hi = 104;
+  const x = i => 4 + i * (W - 8) / (h.length - 1);
+  const y = v => H - 22 - (v - lo) / (hi - lo) * (H - 44);
+  const path = h.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+  const len = 900;
+
+  app.innerHTML = `
+  <section class="section fade-in">
+    <div class="container">
+      <span class="eyebrow">The Takshashila Institution · an interactive decision game</span>
+      <h1 class="display">Prove them<br><em class="house">wrong</em>.</h1>
+      <div class="split" style="margin-top:44px">
+        <div class="stack-24">
+          <p class="lede">You are the chief executive of ${FIRM.name}. ${FIRM.people} people, ${FIRM.revenue} of revenue, and a share price the market has cut by 38% in six quarters on the belief that artificial intelligence has made your business model obsolete.</p>
+          <p>You do not think the market is right. You do think it is asking a fair question. The board has given you eighteen months and eight decisions, and has been explicit about what it expects at the end of them.</p>
+          <div class="aside">
+            <p style="font-size:17px;line-height:1.5">Two numbers are tracked while you play. You will be told what the second one is at the end.</p>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-top:6px">
+            <button class="btn" id="start">Take the chair &rarr;</button>
+            <span class="meta">Five minutes · keys 1–4 also work</span>
+          </div>
+        </div>
+
+        <div class="stack-24">
+          <div class="opening-chart">
+            <span class="eyebrow">Figure 1</span>
+            <h3 style="font-size:18px;font-weight:500;margin:8px 0 2px">Share price, indexed to 100</h3>
+            <div class="meta" style="text-transform:none;letter-spacing:0.06em">Seven quarters to date</div>
+            <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="margin-top:14px" role="img" aria-label="Share price falling from 100 to 62 over seven quarters">
+              ${[100, 80, 60].map(v => `<line x1="4" y1="${y(v)}" x2="${W - 4}" y2="${y(v)}" stroke="rgba(23,20,19,0.08)" stroke-width="1"/>`).join("")}
+              <path d="${path}" fill="none" stroke="#620d3c" stroke-width="1.5"
+                    stroke-dasharray="${len}" stroke-dashoffset="${len}">
+                <animate attributeName="stroke-dashoffset" from="${len}" to="0" dur="1.6s" fill="freeze"/>
+              </path>
+              <rect x="${(x(h.length - 1) - 3).toFixed(1)}" y="${(y(h[h.length - 1]) - 3).toFixed(1)}" width="6" height="6" fill="#f1a222" opacity="0">
+                <animate attributeName="opacity" from="0" to="1" begin="1.5s" dur="0.3s" fill="freeze"/>
+              </rect>
+              <text x="4" y="${(y(100) - 8).toFixed(1)}" font-family="Roboto Mono, monospace" font-size="10" fill="rgba(23,20,19,0.5)">100</text>
+              <text x="${(x(h.length - 1) - 6).toFixed(1)}" y="${(y(h[h.length - 1]) + 20).toFixed(1)}" text-anchor="end" font-family="Roboto Mono, monospace" font-size="11" fill="#620d3c">62</text>
+            </svg>
+            <div class="source">Source: illustrative. ${FIRM.name} is a composite and not a real firm.</div>
+          </div>
+
+          <div>
+            <span class="eyebrow">Board mandate</span>
+            <table class="deftable" style="margin-top:10px">
+              <tr><td>Near term</td><td class="num">+20 to 30%</td></tr>
+              <tr><td>Two years</td><td class="num">× 2.0</td></tr>
+              <tr><td>Decisions</td><td class="num">8</td></tr>
+              <tr><td>Time</td><td class="num">18 months</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>`;
+  $("#start").focus();
+  $("#start").onclick = () => { panel.hidden = false; updatePanel(null); render(); };
+}
+
+function screenDecision() {
+  const d = DECISIONS[S.i];
+  const isBudget = d.type === "budget";
+  window.scrollTo(0, 0);
+  app.innerHTML = `
+  <section class="stage fade-in">
+    <div class="container">
+      <div class="stage-head">
+        <span class="dcode">${d.code} · ${esc(d.eyebrow)}</span>
+        <span class="meta">${String(S.i + 1).padStart(2, "0")} of 08</span>
+      </div>
+      <h2 class="dtitle">${esc(d.title)}</h2>
+      <p class="dcontext">${d.context}</p>
+      <p class="dquestion">${esc(d.question)}</p>
+      ${isBudget ? budgetBlock() : ""}
+      <div class="cards" id="cards">
+        ${d.options.map((o, k) => `
+          <button class="card" data-k="${k}">
+            <span class="card-key">${String(k + 1)}</span>
+            <span class="card-title">${esc(o.label)}</span>
+            <span class="card-body">${o.body}</span>
+          </button>`).join("")}
+      </div>
+      <div id="after"></div>
+    </div>
+  </section>`;
+
+  if (isBudget) {
+    const r = $("#slider");
+    const sync = () => {
+      S.platformPct = +r.value;
+      $("#budget-pct").textContent = S.platformPct + "%";
+      $("#budget-abs").textContent = "≈ $" + (22 * S.platformPct / 100).toFixed(1) + "bn of revenue";
+    };
+    r.oninput = sync; sync();
+  }
+  [...document.querySelectorAll(".card")].forEach(b => {
+    b.onclick = () => choose(+b.dataset.k);
+  });
+}
+
+function budgetBlock() {
+  return `
+  <div class="budget">
+    <div class="budget-top">
+      <div>
+        <span class="eyebrow">Platform and reusable-asset spend</span>
+        <div class="budget-fig num" id="budget-pct" style="margin-top:8px">6%</div>
+      </div>
+      <div class="budget-note" id="budget-abs">≈ $1.3bn of revenue</div>
+    </div>
+    <input type="range" id="slider" min="6" max="30" step="1" value="${S.platformPct}" aria-label="Platform spend as a percentage of revenue">
+    <div class="budget-scale">
+      <span class="meta">6% · today</span>
+      <span class="meta">18%</span>
+      <span class="meta">30%</span>
+    </div>
+  </div>`;
+}
+
+function choose(k) {
+  if (S.awaitingContinue) return;
+  const d = DECISIONS[S.i], o = d.options[k];
+  const prev = { price: priceAt(S.picks.length, S.signal), lag: lagAt(S.picks.length, S.substance) };
+
+  let signal = o.signal, substance = o.substance, pain = o.pain;
+  if (d.type === "budget") {
+    // The size of the budget only counts for as much as the funding source protects.
+    const t = (S.platformPct - 6) / 24;
+    signal += t * 2.5;
+    substance = t * 3 * o.gate + o.substance;
+    pain += S.platformPct >= 20 ? 1 : 0;
+  }
+
+  S.picks.push(k);
+  S.perRound.push({ code: d.code, title: d.title, label: o.label, signal, substance, pain });
+  S.signal += signal; S.substance += substance; S.pain += pain;
+  S.awaitingContinue = true;
+
+  [...document.querySelectorAll(".card")].forEach(b => {
+    b.classList.add("locked");
+    b.classList.add(+b.dataset.k === k ? "chosen" : "dimmed");
+    b.disabled = true;
+  });
+  const slider = $("#slider"); if (slider) slider.disabled = true;
+
+  updatePanel(prev);
+
+  const last = S.i === DECISIONS.length - 1;
+  $("#after").innerHTML = `
+    <div class="wire fade-in">
+      <span class="wire-src">Internal note · ${d.code}</span>
+      <p class="wire-text">${o.wire}</p>
+      <div class="wire-foot">
+        <button class="btn" id="cont">${last ? "Close the eighteen months →" : "Continue →"}</button>
+        <span class="meta">Press enter</span>
+      </div>
+    </div>`;
+  $("#cont").focus();
+  $("#cont").onclick = () => { S.awaitingContinue = false; S.i++; render(); };
+  // Only pull the note into view if it landed below the fold. Instant, not smooth:
+  // a smooth scroll under a sticky header repaints badly in some engines.
+  const box = $("#after").getBoundingClientRect();
+  if (box.bottom > window.innerHeight) $("#after").scrollIntoView({ block: "start" });
+}
+
+/* ---------- the reveal ---------- */
+function screenReveal() {
+  panel.hidden = true;
+  const R = finalScores();
+  const q1pc = (R.q1 - 1) * 100, y2x = R.y2;
+  const q1hit = q1pc >= 20, y2hit = y2x >= 2.0;
+  const fmtPc = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
+
+  app.innerHTML = `
+  <section class="section dark fade-in">
+    <div class="container">
+      <span class="eyebrow">The reckoning</span>
+      <h2 style="font-size:44px;line-height:1.05;letter-spacing:-0.02em;margin-top:14px;max-width:20ch">Eighteen months later.</h2>
+      <div class="kpi-strip">
+        <div class="kpi">
+          <div class="kpi-fig num">${fmtPc(q1pc)}</div>
+          <span class="kpi-label">First quarter · target +20 to 30%</span>
+          <span class="kpi-verdict ${q1hit ? "v-hit" : "v-miss"}">${q1hit ? "Mandate met" : "Mandate missed"}</span>
+        </div>
+        <div class="kpi">
+          <div class="kpi-fig num">× ${y2x.toFixed(2)}</div>
+          <span class="kpi-label">Two years · target × 2.0</span>
+          <span class="kpi-verdict ${y2hit ? "v-hit" : "v-miss"}">${y2hit ? "Mandate met" : "Mandate missed"}</span>
+        </div>
+        <div class="kpi">
+          <div class="kpi-fig num">${Math.round(R.lag)}</div>
+          <span class="kpi-label">The second number</span>
+          <span class="kpi-verdict" style="color:var(--on-dark-meta)">Started at 34</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section dark">
+    <div class="container split">
+      <div class="stack-24">
+        <span class="eyebrow">What you were actually being measured on</span>
+        <h3 style="font-size:32px;line-height:1.15;letter-spacing:-0.01em">The second number was <em class="house">institutional lag</em> — the months your organisation trailed what the technology already allowed.</h3>
+        <p style="font-size:16px;line-height:1.6">It rose by two months every round on its own, because capability advances whether or not you act on it. Only decisions that changed how the firm is paid, staffed, organised and priced pulled it back. Announcements did nothing to it at all.</p>
+        <p style="font-size:16px;line-height:1.6">That is the whole difference between your two results. The first-quarter number responded to what you said. The two-year number responded to this.</p>
+      </div>
+      <div>
+        <span class="eyebrow">The two mandates</span>
+        <table class="deftable" style="margin-top:10px">
+          <tr><td>Near term, bought with</td><td>What you announced</td></tr>
+          <tr><td>Two years, earned with</td><td>What you changed</td></tr>
+          <tr><td>Lag at the start</td><td class="num">34 months</td></tr>
+          <tr><td>Drift over 8 rounds</td><td class="num">+16 months</td></tr>
+          <tr><td>Closed by your decisions</td><td class="num">−${Math.round(clamp(LAG_PER_SUBSTANCE * S.substance, 0, 46))} months</td></tr>
+          <tr><td>Lag at the end</td><td class="num">${Math.round(R.lag)} months</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <span class="eyebrow">Figure 2</span>
+      <h3 style="font-size:22px;font-weight:500;margin:8px 0 2px">Your eight decisions</h3>
+      <div class="meta" style="text-transform:none;letter-spacing:0.06em">What the market heard, against what the firm changed</div>
+      <div class="chart-wrap">${scatterSVG()}</div>
+      <div class="source">Source: your own choices. Axes are the weights carried by each option in this game.</div>
+      ${linkageBlock(R.c)}
+    </div>
+  </section>
+
+  <section class="section deep">
+    <div class="container split">
+      <div>
+        <span class="eyebrow">The verdict</span>
+        <div style="margin-top:14px"><span class="tag wine">${esc(R.ending.tag)}</span></div>
+        <h3 style="font-size:32px;line-height:1.15;letter-spacing:-0.01em;margin-top:20px">${esc(R.ending.head)}</h3>
+        <p style="font-size:16px;line-height:1.65;color:var(--ink-70);margin-top:18px">${esc(R.ending.body)}</p>
+        <div class="aside" style="margin-top:26px">
+          <p style="font-size:18px;line-height:1.45">${esc(R.ending.lesson)}</p>
+        </div>
+      </div>
+      <div>
+        <span class="eyebrow">What you passed over</span>
+        <div class="rowlist">${missedBlock()}</div>
+        <p class="meta" style="text-transform:none;letter-spacing:0.06em;margin-top:14px">The three unchosen options that would have moved the second number most.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wine dark">
+    <div class="container split">
+      <div class="stack-24">
+        <span class="eyebrow">The argument underneath the game</span>
+        <p class="lede" style="color:rgba(255,255,255,0.85)">Every general-purpose technology has arrived faster than the institutions built around the old one could adjust. The gap between the two is where the damage happens, and it closes only when somebody with the power to rewrite the rules is made to.</p>
+        <p style="font-size:16px;line-height:1.6">A firm is an institution too. Its incentives, its hiring, its org chart and its pricing are the rules it actually runs on, and none of them change because a chief executive says the word AI on an analyst call. The market appears to understand this, which may be why it discounts the announcement and waits for the accounts.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;padding-top:8px">
+          <button class="btn accent" id="again">Play again</button>
+          <button class="btn ghost" id="totop">Read the reveal again</button>
+        </div>
+      </div>
+      <div>
+        <span class="eyebrow">Drawn from</span>
+        <table class="deftable" style="margin-top:10px">
+          <tr><td>Working paper</td><td style="color:#fff">Technological Disruption and Institutional Lag</td></tr>
+          <tr><td>Discussion document</td><td style="color:#fff">AI Adoption — Think Tasks, Not Jobs, 2024-22</td></tr>
+          <tr><td>Slide deck</td><td style="color:#fff">State of AI Governance, 2026</td></tr>
+          <tr><td>Author</td><td style="color:#fff">Sridhar Krishna</td></tr>
+          <tr><td>Institution</td><td style="color:#fff">The Takshashila Institution</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>`;
+
+  window.scrollTo(0, 0);
+  $("#again").onclick = () => {
+    Object.assign(S, { i: 0, picks: [], perRound: [], signal: 0, substance: 0, pain: 0,
+                       platformPct: 6, awaitingContinue: false, spark: FIRM.history.slice() });
+    $("#p-delta").textContent = "—"; $("#p-delta").className = "readout-delta delta-flat";
+    $("#p-lagdelta").textContent = "—"; $("#p-lagdelta").className = "readout-delta delta-flat";
+    render();
+  };
+  $("#totop").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function scatterSVG() {
+  const W = 900, H = 430, L = 54, Rp = 30, T = 26, B = 54;
+  const xs = -1.5, xe = 4.5, ys = -1.5, ye = 5.5;
+  const px = v => L + (v - xs) / (xe - xs) * (W - L - Rp);
+  const py = v => H - B - (v - ys) / (ye - ys) * (H - T - B);
+  const grid = [-1, 0, 1, 2, 3, 4, 5].map(v =>
+    `<line x1="${L}" y1="${py(v)}" x2="${W - Rp}" y2="${py(v)}" stroke="rgba(23,20,19,0.08)" stroke-width="1"/>` +
+    `<text x="${L - 10}" y="${py(v) + 3.5}" text-anchor="end" font-family="Roboto Mono, monospace" font-size="10" fill="rgba(23,20,19,0.5)">${v}</text>`
+  ).join("");
+  const xlab = [-1, 0, 1, 2, 3, 4].map(v =>
+    `<text x="${px(v)}" y="${H - B + 18}" text-anchor="middle" font-family="Roboto Mono, monospace" font-size="10" fill="rgba(23,20,19,0.5)">${v}</text>`
+  ).join("");
+  const quad =
+    `<line x1="${px(1.75)}" y1="${T}" x2="${px(1.75)}" y2="${H - B}" stroke="rgba(23,20,19,0.16)" stroke-width="1" stroke-dasharray="3 3"/>` +
+    `<line x1="${L}" y1="${py(1.75)}" x2="${W - Rp}" y2="${py(1.75)}" stroke="rgba(23,20,19,0.16)" stroke-width="1" stroke-dasharray="3 3"/>` +
+    [["Invisible work", px(1.6), py(5.35), "end"], ["Re-rating", px(1.95), py(5.35), "start"],
+     ["Drift", px(1.6), py(-1.25), "end"], ["Theatre", px(1.95), py(-1.25), "start"]]
+      .map(([t, x, y, a]) => `<text x="${x}" y="${y}" text-anchor="${a}" font-family="Roboto Mono, monospace" font-size="10" letter-spacing="1.4" fill="rgba(23,20,19,0.5)">${t.toUpperCase()}</text>`).join("");
+
+  // nudge labels apart where two decisions land on the same point
+  const seen = {};
+  const dots = S.perRound.map(r => {
+    const key = r.signal.toFixed(1) + "|" + r.substance.toFixed(1);
+    const n = seen[key] = (seen[key] || 0) + 1;
+    const x = px(r.signal), y = py(r.substance), off = (n - 1) * 13;
+    return `<rect x="${(x - 3.5).toFixed(1)}" y="${(y - 3.5).toFixed(1)}" width="7" height="7" fill="#620d3c"/>` +
+           `<text x="${(x + 9).toFixed(1)}" y="${(y + 3.5 + off).toFixed(1)}" font-family="Roboto Mono, monospace" font-size="10.5" letter-spacing="0.8" fill="#620d3c">${r.code}</text>`;
+  }).join("");
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Scatter of your eight decisions by signal and substance">
+    ${grid}${xlab}${quad}${dots}
+    <text x="${L}" y="${H - 8}" font-family="Roboto Mono, monospace" font-size="10" letter-spacing="1.4" fill="rgba(23,20,19,0.5)">SIGNAL — WHAT THE MARKET HEARD →</text>
+    <text transform="translate(16 ${H - B}) rotate(-90)" font-family="Roboto Mono, monospace" font-size="10" letter-spacing="1.4" fill="rgba(23,20,19,0.5)">SUBSTANCE — WHAT CHANGED →</text>
+  </svg>`;
+}
+
+function linkageBlock(c) {
+  if (!c.hits.length && !c.misses.length) {
+    return `<div class="ruled-grid" style="margin-top:30px"><div><span class="eyebrow">Linkages</span>
+      <p style="margin-top:10px;color:var(--ink-70)">None of your eight decisions reinforced or cancelled another. Each one stood on its own, which is usually how a firm ends up with eight initiatives and one outcome.</p></div>
+      <div><span class="eyebrow">Effect on the two-year figure</span><p class="num" style="font-size:44px;margin-top:8px">× 1.00</p></div></div>`;
+  }
+  const row = (r, kind) => `<div class="link-item" style="margin-top:9px">
+      <span class="link-code">${r.codes.join(" · ")}</span>
+      <span style="font-size:14px;line-height:1.55;color:var(--ink-70)">${kind === "x" ? '<span class="x-mark">✕ </span>' : ""}${esc(r.text)}</span></div>`;
+  return `<div class="ruled-grid" style="margin-top:30px">
+    <div>
+      <span class="eyebrow">Decisions that reinforced each other</span>
+      ${c.hits.length ? c.hits.map(r => row(r, "o")).join("") : '<p style="margin-top:10px;color:var(--ink-70);font-size:14px">None.</p>'}
+    </div>
+    <div>
+      <span class="eyebrow">Decisions that cancelled each other</span>
+      ${c.misses.length ? c.misses.map(r => row(r, "x")).join("") : '<p style="margin-top:10px;color:var(--ink-70);font-size:14px">None.</p>'}
+    </div>
+    <div>
+      <span class="eyebrow">Coherence multiplier on the two-year figure</span>
+      <p class="num" style="font-size:44px;margin-top:8px">× ${c.factor.toFixed(2)}</p>
+    </div>
+    <div>
+      <span class="eyebrow">Why it is applied</span>
+      <p style="font-size:14px;line-height:1.55;color:var(--ink-70);margin-top:10px">A strategy is not the sum of its decisions. Where two of them instruct the firm to do opposite things, the firm does neither and carries on as before.</p>
+    </div>
+  </div>`;
+}
+
+function missedBlock() {
+  const missed = [];
+  DECISIONS.forEach((d, i) => d.options.forEach((o, k) => {
+    if (k === S.picks[i]) return;
+    const sub = d.type === "budget" ? (o.gate * 3 + o.substance) : o.substance;
+    missed.push({ code: d.code, title: d.title, label: o.label, sub });
+  }));
+  missed.sort((a, b) => b.sub - a.sub);
+  return missed.slice(0, 3).map(m => `
+    <div class="rowlist-item">
+      <span class="t">${esc(m.label)}</span>
+      <span class="d">${m.code} · ${esc(m.title)}</span>
+    </div>`).join("");
+}
+
+/* ============================================================================
+   4. ROUTER
+   ============================================================================ */
+function render() {
+  if (S.i >= DECISIONS.length) { screenReveal(); return; }
+  panel.hidden = false;
+  updatePanel(null);
+  screenDecision();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "Enter") {
+    const b = $("#cont") || $("#start");
+    if (b) { e.preventDefault(); b.click(); }
+    return;
+  }
+  if (/^[1-4]$/.test(e.key) && !S.awaitingContinue) {
+    const b = document.querySelector('.card[data-k="' + (+e.key - 1) + '"]');
+    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+  }
+});
+
+/* Deterministic test harness: __run([0,1,2,3,0,1,2,3], 18) plays a fixed sequence
+   at a given platform percentage, and returns the scores without drawing the reveal. */
+window.__run = (seq, pct) => {
+  Object.assign(S, { i: 0, picks: [], perRound: [], signal: 0, substance: 0, pain: 0,
+                     platformPct: pct || 6, awaitingContinue: false, spark: FIRM.history.slice() });
+  render();
+  seq.forEach(k => {
+    const slider = $("#slider");
+    if (slider) { slider.value = S.platformPct; slider.dispatchEvent(new Event("input")); }
+    choose(k);
+    S.awaitingContinue = false; S.i++;
+    if (S.i < DECISIONS.length) render();
+  });
+  const r = finalScores();
+  return { ending: r.key, q1: +((r.q1 - 1) * 100).toFixed(1), y2: +r.y2.toFixed(2),
+           lag: Math.round(r.lag), signal: +S.signal.toFixed(1), substance: +S.substance.toFixed(1),
+           pain: S.pain, coh: +r.c.factor.toFixed(2),
+           hits: r.c.hits.length, misses: r.c.misses.length };
+};
+window.__state = S;
+
+screenTitle();
+</script>
+</body>
+</html>
