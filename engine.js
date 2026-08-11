@@ -22,7 +22,7 @@ function reset() {
   Object.assign(S, {
     i: 0, picks: [], perRound: [], queue: [],
     signal: 0, substance: 0, pain: 0,
-    platformPct: 6, awaiting: false, firedAt: null,
+    platformPct: 6, awaiting: false, firedAt: null, lastGate: null,
     price: b.price, board: b.board,
     growth: b.growth, margin: b.margin,
     managed: b.managed, unmanaged: b.unmanaged,
@@ -54,13 +54,20 @@ function coherenceCheck() {
   return { hits, misses, factor: clamp(1 + 0.10 * hits.length - 0.16 * misses.length, 0.5, 1.5) };
 }
 
-const MAX_SUBSTANCE = 40;
+/* Sum of the best substance available at each decision. Keep in step with content.js
+   or the two-year curve silently rescales. */
+const MAX_SUBSTANCE = 42;
+/* The ceiling has to sit above what the best path can actually reach. At 3.0 the
+   optimum hit 3.09 and clamped, which made substance beyond that point free — so
+   the spare decisions went to the options this game calls theatre. Headroom keeps
+   real change paying all the way up. The ×2.0 win threshold is unchanged. */
+const Y2_CEILING = 3.6;
 
 function finalScores() {
   const c = coherenceCheck();
   const q1 = q1Mult();
   const attritionPenalty = Math.max(0, S.unmanaged - UNMAN_SAFE) * 0.045;
-  const y2 = clamp((0.55 + clamp(S.substance, 0, MAX_SUBSTANCE) / MAX_SUBSTANCE * 1.95) * c.factor - attritionPenalty, 0.3, 3.0);
+  const y2 = clamp((0.55 + clamp(S.substance, 0, MAX_SUBSTANCE) / MAX_SUBSTANCE * 1.95) * c.factor - attritionPenalty, 0.3, Y2_CEILING);
 
   let key;
   if (S.firedAt !== null)                          key = ["fired1", "fired2", "fired3"][S.firedAt];
@@ -81,6 +88,25 @@ function applyChoice(k) {
   const d = DECISIONS[S.i], o = d.options[k];
   let signal = o.signal, substance = o.substance, pain = o.pain, board = o.board;
 
+  /* Prerequisites. Some moves only work if an earlier decision cleared the way —
+     you cannot direct people you are not equipped to evaluate, so exceptional
+     engineers hired into an unchanged leadership team leave again. Read before
+     S.picks.push, since the requirement always points at an earlier decision. */
+  S.lastGate = null;
+  if (o.requires) {
+    const prior   = S.picks[o.requires.decision];
+    const met     = o.requires.met.includes(prior);
+    const partial = (o.requires.partial || []).includes(prior);
+    if (!met) {
+      const f = partial ? 0.5 : 1, p = o.requires.penalty;
+      substance += (p.substance || 0) * f;
+      board     += (p.board || 0) * f;
+      S.lastGate = { level: partial ? "partial" : "full",
+                     unmanaged: (p.unmanaged || 0) * f,
+                     wire: (partial && o.requires.wirePartial) || o.requires.wire };
+    }
+  }
+
   if (d.type === "budget") {
     // The size of the budget only counts for as much as the funding source protects.
     const t = (S.platformPct - 6) / 24;
@@ -97,7 +123,8 @@ function applyChoice(k) {
   S.price = priceAt(S.picks.length, S.signal);
 
   S.managed   = Math.max(0, S.managed + (o.managed || 0));
-  S.unmanaged = Math.max(0, S.unmanaged + (o.unmanaged || 0) + UNMAN_DRIFT);
+  S.unmanaged = Math.max(0, S.unmanaged + (o.unmanaged || 0) + UNMAN_DRIFT
+                            + (S.lastGate ? S.lastGate.unmanaged : 0));
   S.growth    = S.growth + (o.growth || 0) - 0.18;
   S.margin    = S.margin + (o.margin || 0) - 0.05;
   S.clients   = Math.max(0, S.clients + (o.clients || 0));
@@ -420,10 +447,11 @@ function choose(k) {
   push("Attrition · key people", S.unmanaged - before.unmanaged, 1, true);
 
   const last = S.i === DECISIONS.length - 1;
+  const gate = S.lastGate;
   $("#after").innerHTML = `
     <div class="wire fade-in">
-      <span class="wire-src">Internal note · ${d.code}</span>
-      <p class="wire-text">${o.wire}</p>
+      <span class="wire-src">Internal note · ${d.code}${gate ? " · the ground was not prepared" : ""}</span>
+      <p class="wire-text">${gate ? gate.wire : o.wire}</p>
       <div class="effects">${fx.join("")}</div>
       <div class="wire-foot">
         <button class="btn" id="cont">${last ? "Close the eighteen months →" : "Continue →"}</button>

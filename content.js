@@ -147,7 +147,14 @@ const DECISIONS = [
       { label: "Fewer people, paid extraordinarily",
         body: "Six hundred exceptional engineers on packages that will startle your board, and 12,000 graduates instead of 38,000.",
         signal: 2, substance: 4, pain: 4, board: -6, managed: 4, unmanaged: -3,
-        wire: "Rewarding brilliance disproportionately is the only reliable way to hold it. It also means a twenty-six-year veteran finding out what a twenty-nine-year-old is paid." },
+        wire: "Rewarding brilliance disproportionately is the only reliable way to hold it. It also means a twenty-six-year veteran finding out what a twenty-nine-year-old is paid.",
+        // You cannot direct people you cannot evaluate. Exceptional engineers hired
+        // into an unchanged leadership team leave, and take the strategy with them.
+        requires: {
+          decision: 0, met: [1, 2], partial: [3],
+          penalty: { substance: -4, unmanaged: 6, board: -2 },
+          wire: "Six hundred exceptional engineers arrived into a leadership team that has not changed. Most of them now report to people who cannot evaluate their work, and a third are already gone. You bought the talent and kept the ceiling above it.",
+          wirePartial: "The scorecards changed and the fourteen did not. The engineers you paid extraordinarily are being directed by people who were promoted for something else, and enough of them have noticed for it to show in the numbers." } },
       { label: "Same number, different people",
         body: "Still 38,000, hired for domain, data and verification — for specifying work and proving it came out right.",
         signal: 1, substance: 3, pain: 2, board: 0, managed: 1, unmanaged: -1,
@@ -155,7 +162,13 @@ const DECISIONS = [
       { label: "Buy the capability",
         body: "Acquire three AI-native firms of about two hundred people — and let their culture absorb yours, not the reverse.",
         signal: 3, substance: 3, pain: 3, board: 2, managed: 1, unmanaged: 0,
-        wire: "The instruction is that your people assimilate into theirs. Six hundred against three hundred and forty thousand — the firm will decide whether you meant it." }
+        wire: "The instruction is that your people assimilate into theirs. Six hundred against three hundred and forty thousand — the firm will decide whether you meant it.",
+        // A leadership team that has spent twenty years absorbing acquisitions will
+        // absorb these too, whatever the instruction said.
+        requires: {
+          decision: 0, met: [1, 2], partial: [3],
+          penalty: { substance: -3, unmanaged: 4, board: -1 },
+          wire: "Three AI-native firms, six hundred people, and a leadership team that has spent twenty years absorbing acquisitions into its own way of working. It absorbed these too. The instruction to assimilate the other way was not one anybody above them believed." } }
     ]
   },
   /* ---------------------------------------------------------------- D.04 */
@@ -192,10 +205,12 @@ const DECISIONS = [
         body: "Ring-fence the domain experts and keep them on the accounts that pay for them.",
         signal: 0, substance: 0, pain: 0, board: 2, managed: 0, unmanaged: 1,
         wire: "Protected, billable and unchanged. In four years a third of it walks out of the building, and none of it was ever written down." },
+      // The deepest single move in the game, and the most expensive in the near term:
+      // it must out-rank pairing on substance or it is never worth choosing.
       { label: "Write it down",
         body: "Convert what they know into evaluation sets, process maps and failure taxonomies. Eighteen months, billing nobody.",
-        signal: 1, substance: 4, pain: 3, board: -5, managed: 0, unmanaged: 0,
-        wire: "You have taken four hundred of your most billable people off revenue to write documents. It is also the only form of this asset a model can actually use." },
+        signal: 0, substance: 5, pain: 4, board: -6, managed: 0, unmanaged: 0, margin: -0.8,
+        wire: "You have taken four hundred of your most billable people off revenue to write documents for a year and a half. It is also the only form of this asset a model can actually use, and nobody else in the industry has one." },
       { label: "Pair them",
         body: "Every domain expert paired with an AI engineer. The expert specifies and verifies; the engineer builds.",
         signal: 2, substance: 4, pain: 2, board: 0, managed: 0, unmanaged: -2,
@@ -296,10 +311,13 @@ const DECISIONS = [
         body: "Two verticals, the ones with the deepest domain bench. Everything else unchanged.",
         signal: 2, substance: 4, pain: 2, board: 1, clients: 70, arpc: -22,
         wire: "Narrow enough to be credible and wide enough to matter, which is the hardest kind of bet to defend in a quarterly review." },
+      // Its edge over the other two mid-market plays is that there is nothing to
+      // unpick: less internal disruption, and your best people are not spent
+      // fighting somebody else's forty-year-old systems.
       { label: "Follow the growth, not the size",
         body: "Firms with no legacy estate, at any revenue, in markets that skipped the last three technology cycles.",
-        signal: 1, substance: 4, pain: 3, board: -4, clients: 120, arpc: -34,
-        wire: "No legacy estate means nothing to unpick. It also means no budget line already exists for what you are selling." }
+        signal: 1, substance: 4, pain: 1, board: -4, unmanaged: -2, clients: 120, arpc: -34,
+        wire: "No legacy estate means nothing to unpick, and your best engineers stop spending their weeks inside somebody else's forty-year-old systems. It also means no budget line already exists for what you are selling." }
     ]
   },
   /* ---------------------------------------------------------------- D.10 */
@@ -320,10 +338,12 @@ const DECISIONS = [
         body: "What the work cost before, what it costs now, what you kept. Unglamorous, and checkable.",
         signal: 2, substance: 3, pain: 1, board: 1, managed: 0, unmanaged: 0,
         wire: "Two analysts called it the most useful slide of the day. Neither of them changed their rating." },
+      // The costliest option now and the most protective later: a number you never
+      // gave is a number you never have to defend by cutting the programme to hit it.
       { label: "Nothing new",
-        body: "Report the numbers. Let the next four quarters make the argument for you.",
-        signal: -1, substance: 1, pain: 2, board: -5, managed: 0, unmanaged: 0,
-        wire: "Silence is a position. It is rarely read as a confident one." }
+        body: "Report the numbers. Announce nothing you would later have to protect by cutting the very programme that earns it.",
+        signal: -1, substance: 4, pain: 2, board: -7, managed: 0, unmanaged: 0,
+        wire: "Silence is a position, and it is rarely read as a confident one. It is also the only version of this where the investment survives a bad quarter intact." }
     ]
   }
 ];
@@ -352,6 +372,10 @@ const REVIEWS = [
 /* Rules checked after the run. `p` is the array of chosen option indices,
    `s` is the game state. Indices: 0 D.01 … 9 D.10 */
 const CONTRADICTIONS = [
+  { codes: ["D.03","D.01"], test: p => p[2] === 1 && p[0] === 0,
+    text: "You paid extraordinarily for six hundred engineers and left the people who direct them unchanged." },
+  { codes: ["D.03","D.01"], test: p => p[2] === 3 && p[0] === 0,
+    text: "You bought three AI-native firms and kept the leadership that has always absorbed acquisitions into its own way of working." },
   { codes: ["D.01","D.02"], test: p => p[0] === 1 && p[1] === 0,
     text: "New people in three chairs, and the same scorecard on all fourteen." },
   { codes: ["D.07","D.02"], test: p => p[6] === 2 && p[1] === 0,
