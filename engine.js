@@ -22,7 +22,7 @@ function reset() {
   Object.assign(S, {
     i: 0, picks: [], perRound: [], queue: [],
     signal: 0, substance: 0, pain: 0,
-    platformPct: 6, awaiting: false, firedAt: null, lastGate: null,
+    platformPct: 6, awaiting: false, firedAt: null, lastGate: null, selected: null,
     price: b.price, board: b.board,
     growth: b.growth, margin: b.margin,
     managed: b.managed, unmanaged: b.unmanaged,
@@ -154,6 +154,24 @@ function normaliseMix() {
   ["legacy","infra","consulting","platform"].forEach(k => { m[k] = Math.max(0, m[k]); });
   const t = m.legacy + m.infra + m.consulting + m.platform;
   ["legacy","infra","consulting","platform"].forEach(k => { m[k] = m[k] / t * 100; });
+}
+
+/* Deep enough for S: the only nested values are the mix object and the hist arrays. */
+function snapshot() {
+  const c = Object.assign({}, S);
+  c.picks = S.picks.slice(); c.perRound = S.perRound.slice(); c.queue = S.queue.slice();
+  c.mix = Object.assign({}, S.mix);
+  c.hist = {}; Object.keys(S.hist).forEach(m => c.hist[m] = S.hist[m].slice());
+  return c;
+}
+function restore(c) { Object.keys(S).forEach(k => delete S[k]); Object.assign(S, c); }
+
+/* Replay a hypothetical run without disturbing the finished one on screen. */
+function simulate(seq, pct) {
+  const keep = snapshot();
+  const r = window.__run(seq, pct);
+  restore(keep);
+  return r;
 }
 
 function reviewBand() {
@@ -417,9 +435,26 @@ function screenDecision() {
       $("#budget-abs").textContent = "≈ $" + (22 * S.platformPct / 100).toFixed(1) + "bn of revenue";
     };
   }
-  document.querySelectorAll(".card").forEach(b => { b.onclick = () => choose(+b.dataset.k); });
+  document.querySelectorAll(".card").forEach(b => { b.onclick = () => select(+b.dataset.k); });
   S.awaiting = false;
+  S.selected = null;
   toTop();
+}
+
+/* Selecting touches nothing but the highlight. A misclick therefore costs nothing and
+   reveals nothing — which is what lets the commit stay final once it is made. */
+function select(k) {
+  if (S.awaiting) return;
+  S.selected = k;
+  document.querySelectorAll(".card").forEach(b => {
+    b.classList.toggle("chosen", +b.dataset.k === k);
+  });
+  $("#after").innerHTML = `
+    <div class="confirmbar fade-in">
+      <button class="btn" id="confirm">Commit this decision &rarr;</button>
+      <span class="meta">Press enter · nothing is committed until you do</span>
+    </div>`;
+  $("#confirm").onclick = () => choose(k);
 }
 
 function choose(k) {
@@ -638,18 +673,16 @@ function screenReveal() {
   </section>` : ""}
 
   <section class="section deep">
-    <div class="container split">
-      <div>
-        <span class="eyebrow">What you passed over</span>
-        <div class="rowlist">${missedBlock()}</div>
-        <p class="meta plain" style="margin-top:14px">The three unchosen options that would have changed the firm most.</p>
-      </div>
-      <div>
-        <span class="eyebrow">Play it differently</span>
-        <p style="font-size:16px;line-height:1.6;color:var(--ink-70);margin-top:14px">There is a path that meets both mandates. It needs enough visible change to keep the board in the chair with you, and enough real change underneath that the second year has something to report.</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px">
-          <button class="btn" id="again">Play again</button>
-        </div>
+    <div class="container">
+      <span class="eyebrow">Every road you did not take</span>
+      <h3 style="font-size:32px;line-height:1.15;letter-spacing:-0.015em;margin:12px 0 6px;max-width:26ch">Change one decision, hold the other nine.</h3>
+      <p class="meta plain" style="margin-bottom:4px">${fired
+        ? "Computed over the " + S.picks.length + " decisions you reached before the board removed you."
+        : "Each line is your run with exactly one choice swapped, and everything else left as you played it."}</p>
+      ${whatIfBlock(R)}
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:34px">
+        <button class="btn" id="again">Play again</button>
+        <span class="meta">There is a path that meets both mandates</span>
       </div>
     </div>
   </section>
@@ -727,6 +760,54 @@ function linkageBlock(c) {
   </div>`;
 }
 
+/* Replays the run ten times over, swapping one decision at a time. Cheap — a run is
+   a few microseconds — and it answers the only question the debrief leaves open. */
+function whatIfBlock(R) {
+  const seq = S.picks.slice(), pct = S.platformPct;
+  if (seq.length < 2) return "";
+  const actualWon = S.firedAt === null && (R.q1 - 1) * 100 >= 20 && R.y2 >= 2.0;
+
+  const groups = seq.map((chosen, d) => {
+    const alts = DECISIONS[d].options.map((o, k) => {
+      if (k === chosen) return null;
+      const s = seq.slice(); s[d] = k;
+      const r = simulate(s, pct);
+      const won = r.firedAt === null && r.q1 >= 20 && r.y2 >= 2.0;
+      let flag = "";
+      if (r.firedAt !== null && S.firedAt === null) flag = "Removed at review " + (r.firedAt + 1);
+      else if (r.firedAt === null && S.firedAt !== null) flag = "You would have survived";
+      else if (won && !actualWon) flag = "Both mandates met";
+      else if (!won && actualWon) flag = "Mandate lost";
+      return { label: o.label, y2: r.y2, delta: +(r.y2 - R.y2).toFixed(2), flag, won };
+    }).filter(Boolean).sort((a, b) => b.y2 - a.y2);
+
+    return `<div class="wi-group">
+      <div class="wi-head">
+        <span class="link-code">${DECISIONS[d].code}</span>
+        <span class="wi-title">${esc(DECISIONS[d].title)}</span>
+        <span class="wi-yours">You chose &ldquo;${esc(DECISIONS[d].options[chosen].label)}&rdquo;</span>
+      </div>
+      ${alts.map(a => `<div class="wi-row">
+        <span class="wi-opt">${esc(a.label)}</span>
+        <span class="wi-num num">× ${a.y2.toFixed(2)}</span>
+        <span class="wi-num num ${a.delta > 0 ? "wi-better" : ""}">${a.delta > 0 ? "+" : a.delta < 0 ? "−" : "±"}${Math.abs(a.delta).toFixed(2)}</span>
+        <span class="wi-flag">${esc(a.flag)}</span>
+      </div>`).join("")}
+    </div>`;
+  });
+
+  return `<div class="whatif">
+    <div class="wi-row wi-legend">
+      <span class="wi-opt">Instead of what you chose</span>
+      <span class="wi-num">Two years</span>
+      <span class="wi-num">Change</span>
+      <span class="wi-flag">Outcome</span>
+    </div>
+    ${groups.join("")}
+  </div>
+  <p class="source">Your run was × ${R.y2.toFixed(2)}. Every line above holds the other nine decisions and the platform budget exactly as you set them.</p>`;
+}
+
 function missedBlock() {
   const missed = [];
   DECISIONS.forEach((d, i) => {
@@ -748,14 +829,15 @@ function missedBlock() {
    ============================================================================ */
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // #cont after a commit, #confirm before one. Never #start — the briefing is not skippable.
   if (e.key === "Enter") {
-    const b = $("#cont");           // deliberately not #start — the briefing is not skippable
+    const b = $("#cont") || $("#confirm");
     if (b) { e.preventDefault(); b.click(); }
     return;
   }
   if (/^[1-4]$/.test(e.key) && !S.awaiting) {
     const b = document.querySelector('.card[data-k="' + (+e.key - 1) + '"]');
-    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+    if (b && !b.disabled) { e.preventDefault(); b.click(); }   // selects; Enter commits
   }
 });
 

@@ -291,6 +291,10 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 input[type=range]::-moz-range-thumb { width: 3px; height: 22px; background: var(--wine); border: none; border-radius: 0; }
 .budget-scale { display: flex; justify-content: space-between; margin-top: 2px; }
 
+/* the commit step — a decision is not applied until this is pressed */
+.confirmbar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+              margin-top: 22px; padding-top: 18px; border-top: var(--rule); }
+
 /* consequence note after a choice */
 #after { scroll-margin-top: 200px; }
 .wire { border-top: 2px solid var(--ink); margin-top: 24px; padding-top: 17px; }
@@ -362,6 +366,29 @@ input[type=range]::-moz-range-thumb { width: 3px; height: 22px; background: var(
 
 .chart-wrap { margin-top: 26px; overflow-x: auto; }
 .chart-wrap svg { display: block; min-width: 560px; }
+
+/* what-if table: one line per road not taken */
+.whatif { border-top: 2px solid var(--ink); margin-top: 22px; }
+.wi-row { display: grid; grid-template-columns: 1fr 74px 68px 168px; gap: 18px;
+          align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--ink-10); }
+.wi-legend { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.11em;
+             text-transform: uppercase; color: var(--ink-50); border-bottom: var(--rule); }
+.wi-legend .wi-num, .wi-legend .wi-flag { text-align: right; }
+.wi-group { margin-top: 4px; }
+.wi-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+           padding: 16px 0 7px; border-bottom: 1px solid var(--ink-10); }
+.wi-title { font-size: 15px; font-weight: 500; }
+.wi-yours { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-50); }
+.wi-opt  { font-size: 14px; color: var(--ink-70); }
+.wi-num  { font-size: 14px; text-align: right; font-variant-numeric: tabular-nums; }
+.wi-better { color: var(--wine); font-weight: 500; }
+.wi-flag { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.09em;
+           text-transform: uppercase; color: var(--ink-50); text-align: right; }
+@media (max-width: 720px) {
+  .wi-row { grid-template-columns: 1fr 64px 60px; gap: 12px; }
+  .wi-flag { grid-column: 1 / -1; text-align: left; padding-top: 2px; }
+  .wi-legend .wi-flag { display: none; }
+}
 
 .rowlist { border-top: 2px solid var(--ink); margin-top: 20px; }
 .rowlist-item { display: grid; grid-template-columns: 1fr auto; gap: 22px; align-items: baseline;
